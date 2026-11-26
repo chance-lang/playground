@@ -1,6 +1,22 @@
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-const DIGITS = "0123456789".split("");
+const LOWER_LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const TEENS = ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
 const WHEEL_IDS = ["wheel-br", "wheel-bl", "wheel-fr", "wheel-fl"];
+const POOLS = {
+  letters: LETTERS,
+  lower: LOWER_LETTERS,
+  digits: DIGITS,
+  teens: TEENS,
+};
+// Freeze tire damage look for layout debugging: ?debugTires=0..4
+const DEBUG_TIRES_RAW = new URLSearchParams(location.search).get("debugTires");
+const DEBUG_TIRES_COUNT = (() => {
+  if (DEBUG_TIRES_RAW == null || DEBUG_TIRES_RAW === "") return null;
+  const n = Number(DEBUG_TIRES_RAW);
+  if (!Number.isInteger(n) || n < 0 || n > 4) return null;
+  return n;
+})();
 
 const scoreEl = document.querySelector("#score");
 const choicesEl = document.querySelector("#choices");
@@ -12,12 +28,13 @@ const road = document.querySelector("#road");
 const replayBtn = document.querySelector("#replay");
 const startOverlay = document.querySelector("#start");
 const startBtn = document.querySelector("#startBtn");
+const poolToggles = [...document.querySelectorAll("input[data-pool]")];
 const gameOver = document.querySelector("#gameover");
 const againBtn = document.querySelector("#again");
 const finalScore = document.querySelector("#finalScore");
 const tireIcons = [...tiresEl.children];
 
-const DIGIT_WORDS = {
+const NUMBER_WORDS = {
   0: "zero",
   1: "one",
   2: "two",
@@ -28,6 +45,17 @@ const DIGIT_WORDS = {
   7: "seven",
   8: "eight",
   9: "nine",
+  10: "ten",
+  11: "eleven",
+  12: "twelve",
+  13: "thirteen",
+  14: "fourteen",
+  15: "fifteen",
+  16: "sixteen",
+  17: "seventeen",
+  18: "eighteen",
+  19: "nineteen",
+  20: "twenty",
 };
 
 let score = 0;
@@ -46,15 +74,21 @@ function shuffle(items) {
   return list;
 }
 
+function audioKey(value) {
+  const text = String(value);
+  if (/^[a-z]$/.test(text)) return text.toUpperCase();
+  return text;
+}
+
 function audioPath(value) {
-  return `audio/${encodeURIComponent(String(value))}.mp3`;
+  return `audio/${encodeURIComponent(audioKey(value))}.mp3`;
 }
 
 function getClip(value) {
-  const key = String(value);
+  const key = audioKey(value);
   let clip = audioCache.get(key);
   if (!clip) {
-    clip = new Audio(audioPath(key));
+    clip = new Audio(audioPath(value));
     clip.preload = "auto";
     audioCache.set(key, clip);
   }
@@ -62,7 +96,7 @@ function getClip(value) {
 }
 
 function preloadAudio() {
-  for (const value of [...DIGITS, ...LETTERS]) {
+  for (const value of [...DIGITS, ...TEENS, ...LETTERS]) {
     getClip(value);
   }
 }
@@ -79,13 +113,14 @@ function stopSpeech() {
 }
 
 function spokenPhrase(value) {
-  if (Object.prototype.hasOwnProperty.call(DIGIT_WORDS, value)) {
-    return DIGIT_WORDS[value];
+  const text = String(value);
+  if (Object.prototype.hasOwnProperty.call(NUMBER_WORDS, text)) {
+    return NUMBER_WORDS[text];
   }
-  if (/^[A-Z]$/i.test(value)) {
-    return value.toUpperCase();
+  if (/^[A-Z]$/i.test(text)) {
+    return text.toUpperCase();
   }
-  return String(value);
+  return text;
 }
 
 function speakFallback(value) {
@@ -142,8 +177,41 @@ function renderChoices(choices) {
   }
 }
 
+function poolEnabled(name) {
+  return poolToggles.some((box) => box.dataset.pool === name && box.checked);
+}
+
+function activePools() {
+  const pools = [];
+  for (const [name, values] of Object.entries(POOLS)) {
+    if (!poolEnabled(name)) continue;
+    if (name === "digits") {
+      pools.push(values.includes("0") ? values : ["0", ...values]);
+    } else {
+      pools.push(values);
+    }
+  }
+  return pools;
+}
+
+function syncPoolToggles(source) {
+  const name = source.dataset.pool;
+  for (const box of poolToggles) {
+    if (box.dataset.pool === name) box.checked = source.checked;
+  }
+  syncActionButtons();
+}
+
+function syncActionButtons() {
+  const ready = activePools().length > 0;
+  startBtn.disabled = !ready;
+  againBtn.disabled = !ready;
+}
+
 function nextRound() {
-  const pool = Math.random() < 0.5 ? LETTERS : DIGITS;
+  const pools = activePools();
+  if (!pools.length) return;
+  const pool = pools[Math.floor(Math.random() * pools.length)];
   const picked = shuffle(pool);
   target = picked[0];
   const choices = shuffle(picked.slice(0, 3));
@@ -161,9 +229,8 @@ function finishJump() {
 }
 
 function playJump() {
-  truckRig.classList.remove("driving");
-  road.classList.remove("jumping");
-  truckRig.classList.remove("jumping");
+  truckRig.classList.remove("driving", "jumping", "crashing");
+  road.classList.remove("jumping", "crashing");
   void truckRig.offsetWidth;
   road.classList.add("jumping");
   truckRig.classList.add("jumping");
@@ -172,25 +239,86 @@ function playJump() {
   const settle = () => {
     if (settled) return;
     settled = true;
-    truckRig.removeEventListener("animationend", onEnd);
     window.clearTimeout(timer);
     finishJump();
   };
-  const onEnd = (event) => {
-    if (event.target !== truckRig || event.animationName !== "hop") return;
-    settle();
+  // Wait for the synced hop + ramp exit before clearing the jump.
+  const timer = window.setTimeout(settle, 1600);
+}
+
+function finishCrash() {
+  truckRig.classList.remove("crashing");
+  road.classList.remove("crashing");
+  truckRig.classList.add("driving");
+  if (wheelsLeft === 0) {
+    truckRig.classList.remove("dragging");
+    truckRig.classList.add("wrecked", "front-fire");
+    window.setTimeout(showGameOver, 3000);
+    return;
+  }
+  setLocked(false);
+  nextRound();
+}
+
+function playCrash() {
+  truckRig.classList.remove("driving", "jumping", "crashing");
+  road.classList.remove("jumping", "crashing");
+  void truckRig.offsetWidth;
+  road.classList.add("crashing");
+  truckRig.classList.add("crashing");
+
+  const dropIndex = 4 - wheelsLeft - 1;
+  // Kick fire on just before each tire falls off.
+  if (dropIndex === 0) {
+    window.setTimeout(() => {
+      truckRig.classList.remove("fire-in-small");
+      void truckRig.offsetWidth;
+      truckRig.classList.add("limping", "fire-in-small");
+    }, 220);
+  } else if (dropIndex === 1) {
+    window.setTimeout(() => {
+      truckRig.classList.remove("fire-in-large");
+      void truckRig.offsetWidth;
+      truckRig.classList.add("dragging", "fire-in-large");
+    }, 220);
+  } else if (dropIndex === 2) {
+    window.setTimeout(() => {
+      truckRig.classList.remove("fire-in-front");
+      void truckRig.offsetWidth;
+      truckRig.classList.add("front-fire", "fire-in-front");
+    }, 220);
+  } else if (dropIndex === 3) {
+    window.setTimeout(() => {
+      truckRig.classList.remove("dragging", "fire-in-front-large");
+      void truckRig.offsetWidth;
+      truckRig.classList.add("wrecked", "front-fire", "fire-in-front-large");
+    }, 220);
+  }
+
+  window.setTimeout(dropWheel, 380);
+
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(timer);
+    finishCrash();
   };
-  const timer = window.setTimeout(settle, 1300);
-  truckRig.addEventListener("animationend", onEnd);
+  const timer = window.setTimeout(settle, 1450);
 }
 
 function dropWheel() {
   const index = 4 - wheelsLeft - 1;
   document.getElementById(WHEEL_IDS[index])?.classList.add("gone");
-  if (truck) {
-    truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
-    truck.classList.add(`lost-${index + 1}`);
-  }
+  // Small rear → large rear + hood → front small → undrag + front large.
+  truckRig.classList.add("limping");
+  truckRig.classList.toggle("dragging", index >= 1 && index < 3);
+  truckRig.classList.toggle("front-fire", index >= 2);
+  truckRig.classList.toggle("wrecked", index >= 3);
+  if (index > 0) truckRig.classList.remove("fire-in-small");
+  if (index > 1) truckRig.classList.remove("fire-in-large");
+  if (index > 2) truckRig.classList.remove("fire-in-front");
+  if (index > 3) truckRig.classList.remove("fire-in-front-large");
   tireIcons[index].classList.add("off");
   updateTiresLabel();
 }
@@ -218,24 +346,23 @@ function onChoice(value, button) {
   setLocked(true);
   button.classList.add("wrong");
   wheelsLeft -= 1;
-  dropWheel();
-
-  if (wheelsLeft === 0) {
-    window.setTimeout(showGameOver, 650);
-    return;
-  }
-
-  window.setTimeout(() => {
-    setLocked(false);
-    nextRound();
-  }, 650);
+  playCrash();
 }
 
 function resetGame() {
   score = 0;
   wheelsLeft = 4;
   scoreEl.textContent = "0";
-  if (truck) truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
+  truckRig.classList.remove(
+    "dragging",
+    "limping",
+    "front-fire",
+    "wrecked",
+    "fire-in-small",
+    "fire-in-large",
+    "fire-in-front",
+    "fire-in-front-large"
+  );
   for (const id of WHEEL_IDS) {
     document.getElementById(id)?.classList.remove("gone", "loose");
   }
@@ -246,7 +373,13 @@ function resetGame() {
   nextRound();
 }
 
+for (const box of poolToggles) {
+  box.addEventListener("change", () => syncPoolToggles(box));
+}
+syncActionButtons();
+
 startBtn.addEventListener("click", () => {
+  if (!activePools().length) return;
   startOverlay.hidden = true;
   replayBtn.disabled = false;
   preloadAudio();
@@ -258,10 +391,50 @@ replayBtn.addEventListener("click", () => {
   speak(target);
 });
 
-againBtn.addEventListener("click", resetGame);
+againBtn.addEventListener("click", () => {
+  if (!activePools().length) return;
+  resetGame();
+});
+
+function applyDebugTires() {
+  if (DEBUG_TIRES_COUNT == null) return;
+  wheelsLeft = DEBUG_TIRES_COUNT;
+  const gone = 4 - wheelsLeft;
+  startOverlay.hidden = true;
+  gameOver.hidden = true;
+  replayBtn.disabled = true;
+
+  truckRig.classList.remove(
+    "crashing",
+    "jumping",
+    "dragging",
+    "limping",
+    "front-fire",
+    "wrecked",
+    "fire-in-small",
+    "fire-in-large",
+    "fire-in-front",
+    "fire-in-front-large"
+  );
+  truckRig.classList.add("driving");
+
+  for (let i = 0; i < WHEEL_IDS.length; i += 1) {
+    const lost = i < gone;
+    document.getElementById(WHEEL_IDS[i])?.classList.toggle("gone", lost);
+    tireIcons[i].classList.toggle("off", lost);
+  }
+
+  if (gone >= 1) truckRig.classList.add("limping");
+  if (gone >= 2 && gone <= 3) truckRig.classList.add("dragging");
+  if (gone >= 3) truckRig.classList.add("front-fire");
+  if (gone >= 4) truckRig.classList.add("wrecked");
+
+  updateTiresLabel();
+  setLocked(true);
+}
 
 preloadAudio();
-loadTruck();
+loadTruck().then(applyDebugTires);
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const REAR_HUB = { x: 359, y: 558, r: 178 };
@@ -429,10 +602,115 @@ function makeWheel(id) {
   return { wheel, spin };
 }
 
+function svgEl(name, attrs = {}) {
+  const el = document.createElementNS(SVG_NS, name);
+  for (const [key, value] of Object.entries(attrs)) {
+    el.setAttribute(key, value);
+  }
+  return el;
+}
+
+function makeFxArt(className, artClass, href, size, x, y) {
+  const root = svgEl("g", { class: className });
+  const art = svgEl("image", {
+    class: artClass,
+    x: String(x),
+    y: String(y),
+    width: String(size),
+    height: String(size),
+    preserveAspectRatio: "xMidYMid meet",
+  });
+  art.setAttributeNS("http://www.w3.org/1999/xlink", "href", href);
+  art.setAttribute("href", href);
+  root.appendChild(art);
+  return root;
+}
+
+function makeHubFires() {
+  const layer = svgEl("g", { class: "hub-fires" });
+  // Smaller burst for the first missing rear tire (3 left).
+  const small = 360;
+  layer.appendChild(
+    makeFxArt(
+      "hub-fire hub-fire-small",
+      "hub-fire-art",
+      "img/hub-fire-small.png",
+      small,
+      REAR_HUB.x - small + 40,
+      REAR_HUB.y - small + 110
+    )
+  );
+  // Larger burst replaces small at 2 tires.
+  const large = 560;
+  layer.appendChild(
+    makeFxArt(
+      "hub-fire hub-fire-large",
+      "hub-fire-art",
+      "img/hub-fire.png",
+      large,
+      REAR_HUB.x - large + 60,
+      REAR_HUB.y - large + 20
+    )
+  );
+  // Small front hub fire once a front tire is gone (1 left).
+  const front = 320;
+  layer.appendChild(
+    makeFxArt(
+      "hub-fire hub-fire-front",
+      "hub-fire-art",
+      "img/hub-fire-small.png",
+      front,
+      FRONT_HUB.x - front + 40,
+      FRONT_HUB.y - front + 110
+    )
+  );
+  // Large front fire when the last tire is gone.
+  const frontLarge = 520;
+  layer.appendChild(
+    makeFxArt(
+      "hub-fire hub-fire-front-large",
+      "hub-fire-art",
+      "img/hub-fire.png",
+      frontLarge,
+      FRONT_HUB.x - frontLarge + 80,
+      FRONT_HUB.y - frontLarge + 40
+    )
+  );
+  return layer;
+}
+
+function makeHoodSmoke() {
+  // Drawn behind the body so steam rises from under/behind the hood.
+  const layer = svgEl("g", { class: "hood-smokes" });
+  const hood = 280;
+  layer.appendChild(
+    makeFxArt(
+      "hood-smoke hood-smoke-light",
+      "hood-smoke-art",
+      "img/hood-smoke.png",
+      hood,
+      800,
+      20
+    )
+  );
+  const hoodHeavy = 420;
+  layer.appendChild(
+    makeFxArt(
+      "hood-smoke hood-smoke-heavy",
+      "hood-smoke-art",
+      "img/hood-smoke-heavy.png",
+      hoodHeavy,
+      720,
+      -40
+    )
+  );
+  return layer;
+}
+
 async function loadTruck() {
   const mount = document.querySelector("#truckMount");
   const response = await fetch("trucks/demo-derby.svg");
-  if (!response.ok) return;
+  if (!response.ok) return undefined;
   const doc = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
   const svg = doc.documentElement;
   if (svg.tagName.toLowerCase() !== "svg") return;
@@ -466,7 +744,11 @@ async function loadTruck() {
   frontNear.appendChild(front.wheel);
   svg.appendChild(rearLeft);
   svg.appendChild(frontLeft);
+  // Hood steam sits behind the body.
+  svg.appendChild(makeHoodSmoke());
   svg.appendChild(body);
+  // Hub fire sits behind the near-side tires.
+  svg.appendChild(makeHubFires());
   svg.appendChild(rearNear);
   svg.appendChild(frontNear);
   svg.id = "truck";
