@@ -157,22 +157,6 @@ button {
   overflow: visible;
 }
 
-.lanes {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 52%;
-  height: 8px;
-  opacity: 0.55;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(242, 209, 90, 0.85) 0 24px,
-    transparent 24px 52px
-  );
-  animation: scroll 0.45s linear infinite;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.2));
-}
-
 .ramp {
   position: absolute;
   z-index: 1;
@@ -184,23 +168,79 @@ button {
   pointer-events: none;
 }
 
-.ramp img {
+.ramp img,
+.barricade img {
   display: block;
   width: 100%;
   height: auto;
 }
 
+.barricade {
+  position: absolute;
+  z-index: 1;
+  left: 52%;
+  bottom: -8%;
+  width: min(110%, 420px);
+  opacity: 0;
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.28));
+  pointer-events: none;
+}
+
 .road.jumping .ramp {
-  animation: ramp-pass 1.45s linear forwards;
+  animation: ramp-pass 1.5s linear forwards;
+}
+
+.road.crashing .barricade {
+  animation: barricade-pass 1.35s linear forwards;
+}
+
+.truck-rig.crashing {
+  animation: crash 1.35s ease-in-out forwards;
+}
+
+.truck-rig.crashing .body-float {
+  animation: body-crash 1.35s ease-in-out forwards;
+}
+
+.truck-rig.crashing .coil {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: coil-crash 1.35s ease-in-out forwards;
+}
+
+.truck-rig.crashing .arm {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: arm-crash 1.35s ease-in-out forwards;
 }
 
 .truck-anchor {
   position: absolute;
   z-index: 2;
   left: 50%;
-  bottom: 16%;
+  bottom: 0%;
   width: min(96%, 460px);
   transform: translateX(-50%);
+}
+
+.truck-rig {
+  position: relative;
+}
+
+.truck-pose {
+  position: relative;
+  transform-box: border-box;
+  transform-origin: 80% 98%;
+  transition: transform 0.45s ease;
+}
+
+/* Only tip once both rear tires are gone (2–1 left). */
+.truck-rig.dragging .truck-pose {
+  transform: rotate(-18deg) translate(-2px, -22px);
+}
+
+.truck-rig.wrecked .truck-pose {
+  transform: translateY(60px);
 }
 
 .truck-rig.driving .body-float {
@@ -220,23 +260,23 @@ button {
 }
 
 .truck-rig.jumping {
-  animation: hop 1.25s ease-in-out forwards;
+  animation: hop 1.5s ease-in-out forwards;
 }
 
 .truck-rig.jumping .body-float {
-  animation: body-jump 1.25s ease-in-out forwards;
+  animation: body-jump 1.5s ease-in-out forwards;
 }
 
 .truck-rig.jumping .coil {
   transform-box: fill-box;
   transform-origin: top center;
-  animation: coil-jump 1.25s ease-in-out forwards;
+  animation: coil-jump 1.5s ease-in-out forwards;
 }
 
 .truck-rig.jumping .arm {
   transform-box: fill-box;
   transform-origin: left center;
-  animation: arm-jump 1.25s ease-in-out forwards;
+  animation: arm-jump 1.5s ease-in-out forwards;
 }
 
 .truck {
@@ -244,14 +284,107 @@ button {
   width: 100%;
   height: auto;
   overflow: visible;
-  transform-origin: 70% 78%;
-  transition: transform 0.45s ease;
 }
 
-.truck.lost-1 { transform: translateY(8px) rotate(2.2deg); }
-.truck.lost-2 { transform: translateY(16px) rotate(4.5deg); }
-.truck.lost-3 { transform: translateY(24px) rotate(6.5deg); }
-.truck.lost-4 { transform: translateY(32px) rotate(8.5deg); }
+.truck-rig.dragging:not(.jumping):not(.crashing) {
+  animation: scrape-drag 0.24s ease-in-out infinite;
+}
+
+.hub-fire {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.truck-rig.limping:not(.dragging):not(.wrecked) .hub-fire-small,
+.truck-rig.dragging .hub-fire-large,
+.truck-rig.wrecked .hub-fire-large,
+.truck-rig.dragging:not(.front-fire) .hood-smoke-light,
+.truck-rig.front-fire .hood-smoke-heavy,
+.truck-rig.front-fire:not(.wrecked) .hub-fire-front,
+.truck-rig.wrecked .hub-fire-front-large {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hood-smoke {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.truck-rig.wrecked .hood-smoke-heavy {
+  /* Keep the base planted on the hood after the 1.8 scale-up. */
+  transform: translate(-120px, 250px) scale(1.8);
+  transform-origin: 55% 100%;
+}
+
+.hood-smoke-art {
+  transform-box: fill-box;
+  transform-origin: 50% 95%;
+  animation: hood-smoke-drift 2.2s ease-in-out infinite;
+}
+
+.hub-fire-large {
+  transform: translate(150px, 280px) rotate(20deg) scale(1.1);
+  transform-origin: 70% 80%;
+}
+
+/* Level truck at 0 tires: drop both large fires into the empty wheel wells. */
+.truck-rig.wrecked .hub-fire-large {
+  transform: translate(400px, 230px) rotate(10deg) scale(1.4);
+}
+
+.hub-fire-front-large {
+  transform: translate(40px, 120px) rotate(-8deg) scale(1.05);
+  transform-origin: 30% 85%;
+}
+
+.truck-rig.wrecked .hub-fire-front-large {
+  transform: translate(-40px, 100px) rotate(0deg) scale(1.4);
+}
+
+.hub-fire-art {
+  transform-box: fill-box;
+  transform-origin: 85% 85%;
+  animation: hub-flame 0.55s ease-in-out infinite;
+}
+
+.truck-rig.fire-in-small .hub-fire-small .hub-fire-art {
+  animation:
+    hub-fire-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) forwards,
+    hub-flame 0.55s ease-in-out 0.5s infinite;
+}
+
+.truck-rig.fire-in-large .hub-fire-large .hub-fire-art {
+  animation:
+    hub-fire-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) forwards,
+    hub-flame 0.55s ease-in-out 0.5s infinite;
+}
+
+.truck-rig.fire-in-large .hood-smoke-light .hood-smoke-art {
+  animation:
+    hood-smoke-enter 0.55s cubic-bezier(0.2, 1.2, 0.4, 1) forwards,
+    hood-smoke-drift 2.2s ease-in-out 0.55s infinite;
+}
+
+.truck-rig.fire-in-front .hub-fire-front .hub-fire-art {
+  animation:
+    hub-fire-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) forwards,
+    hub-flame 0.55s ease-in-out 0.5s infinite;
+}
+
+.truck-rig.fire-in-front .hood-smoke-heavy .hood-smoke-art {
+  animation:
+    hood-smoke-enter 0.55s cubic-bezier(0.2, 1.2, 0.4, 1) forwards,
+    hood-smoke-drift 2.2s ease-in-out 0.55s infinite;
+}
+
+.truck-rig.fire-in-front-large .hub-fire-front-large .hub-fire-art {
+  animation:
+    hub-fire-enter 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) forwards,
+    hub-flame 0.55s ease-in-out 0.5s infinite;
+}
 
 .shadow { fill: rgba(0, 0, 0, 0.28); }
 
@@ -284,7 +417,7 @@ button {
 .spin {
   transform-box: fill-box;
   transform-origin: center;
-  animation: spin 0.4s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 .wheel {
@@ -470,6 +603,7 @@ button {
   display: flex;
   flex-direction: column;
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: #734f2f;
 }
 
 .choices {
@@ -661,48 +795,93 @@ button {
 }
 
 @keyframes hop {
+  /* Match ramp-pass: climb the incline, launch at the peak, land after the drop. */
   0% { transform: translateY(0) rotate(0deg); }
-  16% { transform: translateY(4px) rotate(-2deg); }
-  42% { transform: translateY(-86px) rotate(-10deg); }
-  62% { transform: translateY(-34px) rotate(6deg); }
-  78% { transform: translateY(6px) rotate(-1deg); }
+  18% { transform: translateY(10px) rotate(-4deg); }
+  32% { transform: translateY(-48px) rotate(-8deg); }
+  42% { transform: translateY(-148px) rotate(-14deg); }
+  58% { transform: translateY(-72px) rotate(7deg); }
+  72% { transform: translateY(12px) rotate(-2deg); }
+  86% { transform: translateY(-4px) rotate(1deg); }
   100% { transform: translateY(0) rotate(0deg); }
 }
 
 @keyframes body-jump {
   0% { transform: translateY(0); }
-  16% { transform: translateY(10px); }
-  42% { transform: translateY(-12px); }
-  62% { transform: translateY(-4px); }
-  78% { transform: translateY(14px); }
+  18% { transform: translateY(12px); }
+  32% { transform: translateY(2px); }
+  42% { transform: translateY(-14px); }
+  58% { transform: translateY(-4px); }
+  72% { transform: translateY(16px); }
   100% { transform: translateY(0); }
 }
 
 @keyframes coil-jump {
   0% { transform: scaleY(1); }
-  16% { transform: scaleY(0.55); }
-  42% { transform: scaleY(1.2); }
-  62% { transform: scaleY(1.05); }
-  78% { transform: scaleY(0.48); }
+  18% { transform: scaleY(0.5); }
+  32% { transform: scaleY(0.85); }
+  42% { transform: scaleY(1.22); }
+  58% { transform: scaleY(1.05); }
+  72% { transform: scaleY(0.45); }
   100% { transform: scaleY(1); }
 }
 
 @keyframes arm-jump {
   0% { transform: rotate(0deg); }
-  16% { transform: rotate(8deg); }
-  42% { transform: rotate(-6deg); }
-  78% { transform: rotate(10deg); }
+  18% { transform: rotate(10deg); }
+  32% { transform: rotate(4deg); }
+  42% { transform: rotate(-8deg); }
+  72% { transform: rotate(12deg); }
   100% { transform: rotate(0deg); }
 }
 
 @keyframes ramp-pass {
-  0% { transform: translateX(70vw); opacity: 1; }
-  35% { transform: translateX(-10%); opacity: 1; }
-  100% { transform: translateX(calc(-100% - 110vw)); opacity: 1; }
+  /* Peak of the mound under the truck around 42%, then exit fully left. */
+  0% { transform: translateX(90vw); opacity: 1; }
+  18% { transform: translateX(28%); opacity: 1; }
+  42% { transform: translateX(-52%); opacity: 1; }
+  100% { transform: translateX(calc(-100% - 120vw)); opacity: 1; }
 }
 
-@keyframes scroll {
-  to { background-position: -58px 0; }
+@keyframes barricade-pass {
+  0% { transform: translateX(85vw); opacity: 1; }
+  28% { transform: translateX(-18%); opacity: 1; }
+  100% { transform: translateX(calc(-100% - 120vw)); opacity: 1; }
+}
+
+@keyframes crash {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(8px, 8px) rotate(3deg); }
+  28% { transform: translate(26px, -6px) rotate(-8deg); }
+  38% { transform: translate(-28px, 14px) rotate(10deg); }
+  52% { transform: translate(10px, 4px) rotate(-4deg); }
+  68% { transform: translate(-6px, 8px) rotate(3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes body-crash {
+  0% { transform: translateY(0); }
+  20% { transform: translateY(10px); }
+  28% { transform: translateY(-8px); }
+  38% { transform: translateY(16px); }
+  68% { transform: translateY(6px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes coil-crash {
+  0% { transform: scaleY(1); }
+  20% { transform: scaleY(0.55); }
+  28% { transform: scaleY(1.15); }
+  38% { transform: scaleY(0.42); }
+  100% { transform: scaleY(1); }
+}
+
+@keyframes arm-crash {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(8deg); }
+  28% { transform: rotate(-10deg); }
+  38% { transform: rotate(14deg); }
+  100% { transform: rotate(0deg); }
 }
 
 @keyframes arena-scroll {
@@ -717,6 +896,33 @@ button {
 @keyframes wheel-fall {
   0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
   100% { transform: translate(-28px, 110px) rotate(-160deg); opacity: 0; }
+}
+
+@keyframes scrape-drag {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(3px) rotate(-0.8deg); }
+}
+
+@keyframes hub-fire-enter {
+  0% { transform: scale(0.12) rotate(-12deg); opacity: 0; }
+  55% { transform: scale(1.14) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes hood-smoke-enter {
+  0% { transform: translateY(24px) scale(0.35); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes hood-smoke-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-6px, -10px) scale(1.04); }
+}
+
+@keyframes hub-flame {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  40% { transform: scale(1.06, 1.1) rotate(2deg); }
+  70% { transform: scale(0.97, 1.02) rotate(-3deg); }
 }
 
 @keyframes puff {
@@ -739,12 +945,30 @@ button {
   .truck-rig.jumping .body-float,
   .truck-rig.jumping .coil,
   .truck-rig.jumping .arm,
+  .truck-rig.crashing,
+  .truck-rig.crashing .body-float,
+  .truck-rig.crashing .coil,
+  .truck-rig.crashing .arm,
   .spin,
-  .lanes,
   .arena-track,
   .road.jumping .ramp,
+  .road.crashing .barricade,
   .wheel.gone,
-  .smoke-puff {
+  .smoke-puff,
+  .truck-rig.dragging,
+  .hub-fire-art,
+  .hood-smoke-art {
     animation: none;
+  }
+
+  .truck-rig.limping:not(.dragging):not(.wrecked) .hub-fire-small,
+  .truck-rig.dragging .hub-fire-large,
+  .truck-rig.wrecked .hub-fire-large,
+  .truck-rig.dragging:not(.front-fire) .hood-smoke-light,
+  .truck-rig.front-fire .hood-smoke-heavy,
+  .truck-rig.front-fire:not(.wrecked) .hub-fire-front,
+  .truck-rig.wrecked .hub-fire-front-large {
+    opacity: 0;
+    visibility: hidden;
   }
 }
