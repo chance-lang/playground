@@ -292,6 +292,7 @@ button {
 .wheel {
   transform-box: fill-box;
   transform-origin: center;
+  scale: 1.2;
 }
 
 .wheel.loose {
@@ -638,7 +639,7 @@ button {
 }
 
 @keyframes spin {
-  to { transform: rotate(-360deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes wheel-fall {
