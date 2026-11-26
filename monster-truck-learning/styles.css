@@ -194,6 +194,123 @@ button {
   animation: barricade-pass 1.35s linear forwards;
 }
 
+.road.crashing .barricade.hit {
+  animation:
+    barricade-pass 1.35s linear forwards,
+    barricade-burst 0.55s ease-out 0.28s forwards;
+}
+
+.crash-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.crash-fx .boom {
+  position: absolute;
+  left: 62%;
+  bottom: 28%;
+  width: 18%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 45% 40%, #fff6a8 0%, #ffb347 22%, #ff5a1f 48%, #c41e0a 68%, transparent 72%);
+  opacity: 0;
+  transform: scale(0.2);
+  filter: blur(0.5px);
+  mix-blend-mode: screen;
+}
+
+.crash-fx.boom-on .boom {
+  animation: boom-burst 0.07s cubic-bezier(0.15, 0.9, 0.3, 1) forwards;
+}
+
+.crash-fx .flash {
+  position: absolute;
+  left: 55%;
+  bottom: 18%;
+  width: 34%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 240, 180, 0.9) 0%, rgba(255, 140, 40, 0.35) 40%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+.crash-fx.boom-on .flash {
+  animation: boom-flash 0.045s ease-out forwards;
+}
+
+.crash-fx .smoke-ring {
+  position: absolute;
+  left: 58%;
+  bottom: 22%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 6px solid rgba(70, 60, 50, 0.45);
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+.crash-fx.boom-on .smoke-ring {
+  animation: smoke-ring 0.075s ease-out forwards;
+}
+
+.crash-fx .debris {
+  position: absolute;
+  left: 58%;
+  bottom: 36%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.crash-fx.boom-on .debris {
+  animation-name: debris-fly;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+.crash-fx .spring {
+  width: 14px;
+  height: 28px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      #2ad0ff 0 3px,
+      transparent 3px 5px
+    );
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #0f6f88;
+}
+
+.crash-fx .bolt {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: linear-gradient(135deg, #ffe14a, #c9a20a);
+  box-shadow: 0 0 0 1px #7a6200;
+}
+
+.crash-fx .panel {
+  width: 22px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(160deg, #ff4d2e 0%, #9a1c10 100%);
+  box-shadow: 0 0 0 1px #4a0c08;
+  transform: skewX(-12deg);
+}
+
+.crash-fx .nut {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b8bec6;
+  box-shadow: inset 0 0 0 2px #6d737a;
+}
+
 .truck-rig.crashing {
   animation: crash 1.35s ease-in-out forwards;
 }
@@ -432,10 +549,12 @@ button {
 }
 
 .wheel.gone {
-  animation: wheel-fall 0.65s ease-in forwards;
+  animation: tire-pop 0.85s cubic-bezier(0.2, 0.8, 0.35, 1) forwards;
 }
 
-.wheel.gone .spin { animation-play-state: paused; }
+.wheel.gone .spin {
+  animation: tire-spin-out 0.85s linear forwards;
+}
 
 .chassis .rail,
 .chassis .truss {
@@ -849,6 +968,41 @@ button {
   100% { transform: translateX(calc(-100% - 120vw)); opacity: 1; }
 }
 
+@keyframes barricade-burst {
+  0% { filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.28)) brightness(1); }
+  35% { filter: drop-shadow(0 0 18px rgba(255, 120, 20, 0.85)) brightness(1.45); }
+  100% { filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.28)) brightness(1); }
+}
+
+@keyframes boom-burst {
+  0% { opacity: 0; transform: scale(0.15); }
+  18% { opacity: 1; transform: scale(1.15); }
+  55% { opacity: 0.85; transform: scale(1.55); }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+
+@keyframes boom-flash {
+  0% { opacity: 0; transform: scale(0.3); }
+  25% { opacity: 0.95; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+@keyframes smoke-ring {
+  0% { opacity: 0.7; transform: scale(0.25); border-width: 10px; }
+  100% { opacity: 0; transform: scale(2.4); border-width: 1px; }
+}
+
+@keyframes debris-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) rotate(var(--spin)) scale(0.75);
+  }
+}
+
 @keyframes crash {
   0% { transform: translate(0, 0) rotate(0deg); }
   20% { transform: translate(8px, 8px) rotate(3deg); }
@@ -893,9 +1047,17 @@ button {
   to { transform: rotate(360deg); }
 }
 
-@keyframes wheel-fall {
-  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-  100% { transform: translate(-28px, 110px) rotate(-160deg); opacity: 0; }
+@keyframes tire-pop {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  12% { transform: translate(-4px, -6px) rotate(-8deg) scale(1.28, 0.82); opacity: 1; }
+  22% { transform: translate(6px, -18px) rotate(12deg) scale(1.45); opacity: 1; }
+  38% { transform: translate(-18px, 8px) rotate(-40deg) scale(1.1, 0.7); opacity: 1; }
+  100% { transform: translate(-48px, 130px) rotate(-240deg) scale(0.55); opacity: 0; }
+}
+
+@keyframes tire-spin-out {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-420deg); }
 }
 
 @keyframes scrape-drag {
@@ -954,10 +1116,15 @@ button {
   .road.jumping .ramp,
   .road.crashing .barricade,
   .wheel.gone,
+  .wheel.gone .spin,
   .smoke-puff,
   .truck-rig.dragging,
   .hub-fire-art,
-  .hood-smoke-art {
+  .hood-smoke-art,
+  .crash-fx.boom-on .boom,
+  .crash-fx.boom-on .flash,
+  .crash-fx.boom-on .smoke-ring,
+  .crash-fx.boom-on .debris {
     animation: none;
   }
 
