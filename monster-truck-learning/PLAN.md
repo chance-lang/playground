@@ -31,10 +31,11 @@ Pre-recorded MP3s for digits, teens, and letters. Browser `speechSynthesis` is f
 
 Correct-answer feedback uses real clips (not WebAudio tones):
 
-- `correct-rev.mp3` — Casper “Monster Truck Rev” (`engine-monster-rev`, deep rising/falling V8-style roar; free under Casper sound-effects license); playback capped at **1.2s**
+- `correct-rev.mp3` — Casper “Monster Truck Rev” (`engine-monster-rev`); playback capped at **1.2s**
 - `correct-whoosh.mp3` — takeoff whoosh layered ~0.45s in, also ending by 1.2s
+- `crash.mp3` — Casper “Heavy Car Crash” (`car-crash-heavy`); plays on barricade hit (~1.2s)
 
-Crash impact SFX are still synthesized in `game.js`.
+All game SFX use HTML `Audio` (same as letter clips) and are primed on Tap to start so mobile browsers allow them.
 
 **How they were generated (keep new clips matching this):** Google Translate TTS, not a named Cloud TTS / WaveNet / Neural2 voice.
 

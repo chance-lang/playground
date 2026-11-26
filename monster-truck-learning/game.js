@@ -73,8 +73,10 @@ let sfxCtx = null;
 const SFX = {
   correctRev: "audio/sfx/correct-rev.mp3",
   correctWhoosh: "audio/sfx/correct-whoosh.mp3",
+  crash: "audio/sfx/crash.mp3",
 };
 const sfxCache = new Map();
+let audioUnlocked = false;
 
 function shuffle(items) {
   const list = [...items];
@@ -118,7 +120,8 @@ function getSfx(path) {
 
 function playSfxFile(path, { volume = 1, whenMs = 0, durationMs = null } = {}) {
   const play = () => {
-    const clip = getSfx(path).cloneNode(true);
+    // Fresh Audio() (not cloneNode) — iOS often refuses cloned elements.
+    const clip = new Audio(path);
     clip.volume = volume;
     const result = clip.play();
     if (result && typeof result.catch === "function") result.catch(() => {});
@@ -150,6 +153,43 @@ function preloadAudio() {
     getClip(value);
   }
   for (const path of Object.values(SFX)) getSfx(path);
+}
+
+function unlockAudio() {
+  if (audioUnlocked) {
+    ensureSfx();
+    return;
+  }
+  audioUnlocked = true;
+  const ctx = ensureSfx();
+  // Silent Web Audio tick so later synthesized/scheduled tones are allowed.
+  if (ctx) {
+    const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start(0);
+    if (ctx.state === "suspended") ctx.resume();
+  }
+  // Prime HTMLAudio SFX under the same user gesture as letter clips.
+  for (const path of Object.values(SFX)) {
+    const clip = getSfx(path);
+    clip.muted = true;
+    const primed = clip.play();
+    if (primed && typeof primed.then === "function") {
+      primed
+        .then(() => {
+          clip.pause();
+          clip.currentTime = 0;
+          clip.muted = false;
+        })
+        .catch(() => {
+          clip.muted = false;
+        });
+    } else {
+      clip.muted = false;
+    }
+  }
 }
 
 function stopSpeech() {
@@ -213,51 +253,6 @@ function ensureSfx() {
   return sfxCtx;
 }
 
-function playTone(ctx, { freq, start, dur, type = "sine", gain = 0.2, slideTo = null }) {
-  const osc = ctx.createOscillator();
-  const amp = ctx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, start);
-  if (slideTo != null) {
-    osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), start + dur);
-  }
-  amp.gain.setValueAtTime(0.0001, start);
-  amp.gain.exponentialRampToValueAtTime(gain, start + 0.02);
-  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-  osc.connect(amp);
-  amp.connect(ctx.destination);
-  osc.start(start);
-  osc.stop(start + dur + 0.02);
-}
-
-function playNoiseBurst(ctx, { start, dur, gain = 0.35, filterFreq = 900, filterType = "bandpass", slideTo = null }) {
-  const rate = ctx.sampleRate;
-  const frames = Math.max(1, Math.floor(rate * dur));
-  const buffer = ctx.createBuffer(1, frames, rate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < frames; i += 1) {
-    data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
-  }
-  const src = ctx.createBufferSource();
-  src.buffer = buffer;
-  const filter = ctx.createBiquadFilter();
-  filter.type = filterType;
-  filter.frequency.setValueAtTime(filterFreq, start);
-  if (slideTo != null) {
-    filter.frequency.exponentialRampToValueAtTime(Math.max(80, slideTo), start + dur);
-  }
-  filter.Q.value = 0.7;
-  const amp = ctx.createGain();
-  amp.gain.setValueAtTime(0.0001, start);
-  amp.gain.exponentialRampToValueAtTime(gain, start + 0.03);
-  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-  src.connect(filter);
-  filter.connect(amp);
-  amp.connect(ctx.destination);
-  src.start(start);
-  src.stop(start + dur);
-}
-
 function playCorrectSfx() {
   // Real monster-truck engine rev + takeoff whoosh, capped at 1.2s.
   playSfxFile(SFX.correctRev, { volume: 0.95, durationMs: 1200 });
@@ -265,57 +260,9 @@ function playCorrectSfx() {
 }
 
 function playCrashSfx() {
-  const ctx = ensureSfx();
-  if (!ctx) return;
-  const t = ctx.currentTime;
-  // Delayed to the barricade impact / tire pop beat.
-  const hit = t + 0.28;
-  // Explosion boom.
-  playTone(ctx, {
-    freq: 95,
-    start: hit,
-    dur: 0.55,
-    type: "sawtooth",
-    gain: 0.34,
-    slideTo: 36,
-  });
-  playTone(ctx, {
-    freq: 180,
-    start: hit,
-    dur: 0.28,
-    type: "square",
-    gain: 0.14,
-    slideTo: 55,
-  });
-  playNoiseBurst(ctx, { start: hit, dur: 0.35, gain: 0.5, filterFreq: 520 });
-  playNoiseBurst(ctx, { start: hit + 0.04, dur: 0.45, gain: 0.28, filterFreq: 1600 });
-  // Metal parts clatter.
-  playTone(ctx, {
-    freq: 520,
-    start: hit + 0.06,
-    dur: 0.12,
-    type: "triangle",
-    gain: 0.1,
-    slideTo: 180,
-  });
-  playTone(ctx, {
-    freq: 740,
-    start: hit + 0.14,
-    dur: 0.1,
-    type: "square",
-    gain: 0.07,
-    slideTo: 220,
-  });
-  // Tire pop / hiss.
-  playTone(ctx, {
-    freq: 260,
-    start: hit + 0.02,
-    dur: 0.1,
-    type: "sine",
-    gain: 0.16,
-    slideTo: 90,
-  });
-  playNoiseBurst(ctx, { start: hit + 0.02, dur: 0.22, gain: 0.32, filterFreq: 2400 });
+  // MP3 crash (same path as letter clips) — Web Audio alone is often silent on mobile.
+  ensureSfx();
+  playSfxFile(SFX.crash, { volume: 0.18, whenMs: 260, durationMs: 1200 });
 }
 
 function spawnCrashFx() {
@@ -638,8 +585,8 @@ startBtn.addEventListener("click", () => {
   if (!activePools().length) return;
   startOverlay.hidden = true;
   replayBtn.disabled = false;
-  ensureSfx();
   preloadAudio();
+  unlockAudio();
   nextRound();
 });
 
@@ -650,7 +597,7 @@ replayBtn.addEventListener("click", () => {
 
 againBtn.addEventListener("click", () => {
   if (!activePools().length) return;
-  ensureSfx();
+  unlockAudio();
   resetGame();
 });
 
