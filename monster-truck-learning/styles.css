@@ -292,6 +292,7 @@ button {
 .wheel {
   transform-box: fill-box;
   transform-origin: center;
+  scale: 1.2;
 }
 
 .wheel.loose {
