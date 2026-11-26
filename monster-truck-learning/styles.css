@@ -201,16 +201,44 @@ button {
   z-index: 2;
   left: 50%;
   bottom: -2%;
-  width: min(94%, 420px);
+  width: min(96%, 460px);
   transform: translateX(-50%);
 }
 
-.truck-rig.driving {
-  animation: bob 0.32s ease-in-out infinite;
+.truck-rig.driving .body-float {
+  animation: body-bounce 0.34s ease-in-out infinite;
+}
+
+.truck-rig.driving .coil {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: coil-bounce 0.34s ease-in-out infinite;
+}
+
+.truck-rig.driving .arm {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: arm-bounce 0.34s ease-in-out infinite;
 }
 
 .truck-rig.jumping {
-  animation: hop 1.2s ease-in-out forwards;
+  animation: hop 1.25s ease-in-out forwards;
+}
+
+.truck-rig.jumping .body-float {
+  animation: body-jump 1.25s ease-in-out forwards;
+}
+
+.truck-rig.jumping .coil {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: coil-jump 1.25s ease-in-out forwards;
+}
+
+.truck-rig.jumping .arm {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: arm-jump 1.25s ease-in-out forwards;
 }
 
 .truck {
@@ -218,120 +246,224 @@ button {
   width: 100%;
   height: auto;
   overflow: visible;
-  transform-origin: 72% 72%;
+  transform-origin: 70% 78%;
   transition: transform 0.45s ease;
 }
 
-.truck.lost-1 { transform: translateY(7px) rotate(2.2deg); }
-.truck.lost-2 { transform: translateY(16px) rotate(4.4deg); }
-.truck.lost-3 { transform: translateY(24px) rotate(6.2deg); }
-.truck.lost-4 { transform: translateY(34px) rotate(8deg); }
+.truck.lost-1 { transform: translateY(8px) rotate(2.2deg); }
+.truck.lost-2 { transform: translateY(16px) rotate(4.5deg); }
+.truck.lost-3 { transform: translateY(24px) rotate(6.5deg); }
+.truck.lost-4 { transform: translateY(32px) rotate(8.5deg); }
 
-.shadow { fill: rgba(0, 0, 0, 0.24); }
+.shadow { fill: rgba(0, 0, 0, 0.28); }
 
-.wheel .tire { fill: #121212; }
-.wheel .sidewall { fill: #1f1f1f; stroke: #3a3a3a; stroke-width: 2; }
-.wheel .rear-rim { fill: #d62828; stroke: #7a1010; stroke-width: 2; }
-.wheel .front-rim { fill: #2a2a2a; stroke: #111; stroke-width: 2; }
-.wheel .hub { fill: #f2f2f2; stroke: #111; stroke-width: 1.5; }
-.wheel .spokes {
+.wheel .tire { fill: #1a1a1a; stroke: #111; stroke-width: 4; }
+.wheel .lugs {
   fill: none;
-  stroke: #f4f4f4;
-  stroke-width: 3;
-  stroke-linecap: round;
-  opacity: 0.55;
+  stroke: #111;
+  stroke-width: 18;
+  stroke-dasharray: 16 10;
 }
+.wheel .sidewall { fill: #2a2a2a; stroke: #111; stroke-width: 3; }
+.wheel .rear-rim { fill: #e10600; stroke: #111; stroke-width: 4; }
+.wheel .front-rim { fill: #1a1a1a; stroke: #111; stroke-width: 4; }
+.wheel .hub-dark { fill: #2c2c2c; stroke: #111; stroke-width: 2; }
+.wheel .hub { fill: #d0d4d8; stroke: #111; stroke-width: 2; }
+.wheel .bolts circle { fill: #c5ccd2; stroke: #111; stroke-width: 1; }
 .wheel .rear-mark {
   fill: none;
-  stroke: #e63946;
-  stroke-width: 3;
+  stroke: #ff3b3b;
+  stroke-width: 4;
   stroke-linecap: round;
-  opacity: 0.85;
 }
 .wheel .front-mark {
   fill: none;
   stroke: #ffe14a;
-  stroke-width: 3;
+  stroke-width: 7;
   stroke-linecap: round;
-  opacity: 0.85;
 }
 
 .spin {
   transform-box: fill-box;
   transform-origin: center;
-  animation: spin 0.42s linear infinite;
+  animation: spin 0.4s linear infinite;
+}
+
+.wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.wheel.loose {
+  transform: translate(12px, 16px) rotate(16deg);
+  transition: transform 0.35s ease;
 }
 
 .wheel.gone {
-  animation: wheel-fall 0.55s ease-in forwards;
+  animation: wheel-fall 0.65s ease-in forwards;
 }
 
 .wheel.gone .spin { animation-play-state: paused; }
 
-.chassis .shock {
+.chassis .rail,
+.chassis .truss {
   fill: none;
-  stroke: #3bd4ff;
-  stroke-width: 9;
+  stroke: #1aa3c7;
+  stroke-width: 6;
+  stroke-linejoin: round;
   stroke-linecap: round;
 }
-.chassis .axle {
+.chassis .frame {
+  fill: #2ad0ff;
+  stroke: #111;
+  stroke-width: 3;
+}
+.chassis .arm {
   fill: none;
-  stroke: #2bb8e0;
+  stroke: #ffe14a;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.chassis .suspension.front .arm {
+  transform-origin: right center;
+}
+.chassis .shock-rod {
+  stroke: #0f6f88;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.chassis .coil path {
+  fill: none;
+  stroke: #2ad0ff;
   stroke-width: 5;
   stroke-linecap: round;
 }
-.chassis .frame { fill: #2ec8f0; stroke: #1490b0; stroke-width: 2; }
-.body .cage {
+.chassis .shock-can {
+  fill: #0f6f88;
+  stroke: #111;
+  stroke-width: 2;
+}
+
+.body-float .shell,
+.body-float .rear-flare,
+.body-float .front-flare {
+  fill: url(#bodyPaint);
+  stroke: #111;
+  stroke-width: 3;
+}
+.body-float .window {
+  fill: #111;
+  stroke: #111;
+  stroke-width: 4;
+}
+.body-float .glass { fill: #d7eef6; stroke: none; }
+.body-float .seat { fill: #1b2830; }
+.body-float .yellow-panel { fill: #f0b429; stroke: #111; stroke-width: 3; }
+.body-float .hazard-fill { fill: url(#hazard); }
+.body-float .brush-slot { fill: #16323a; stroke: none; }
+.body-float .crack {
   fill: none;
-  stroke: #3bd4ff;
+  stroke: #1b2830;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+.body-float .cage {
+  fill: none;
+  stroke: #2ad0ff;
   stroke-width: 7;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-
-.body .shell { fill: #e10600; stroke: #8b0000; stroke-width: 2; }
-.body .hood { fill: #c90500; }
-.body .window {
-  fill: #9fd9ef;
-  stroke: #1b2830;
-  stroke-width: 3;
-  opacity: 0.92;
+.body-float .stack { fill: url(#chrome); stroke: #111; stroke-width: 2; }
+.body-float .stack-top { fill: #c5ccd2; stroke: #111; stroke-width: 2; }
+.body-float .brush { fill: #2ad0ff; stroke: #111; stroke-width: 3; }
+.body-float .pipe {
+  fill: none;
+  stroke: #1aa3c7;
+  stroke-width: 6;
+  stroke-linecap: round;
 }
-.body .grille { stroke: #4a0808; stroke-width: 1; }
-.body .bumper { fill: #1a1a1a; }
+.body-float .rust { fill: #8a4b21; opacity: 0.42; }
+.body-float .hazard-panel { stroke: #111; stroke-width: 2; }
 
-.graffiti .x-badge {
+.graffiti .xxx {
   fill: #ffe14a;
   stroke: #111;
   stroke-width: 3;
-}
-.graffiti .x-mark {
-  fill: none;
-  stroke: #d62828;
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-.graffiti .number-plate { fill: #111; }
-.graffiti .number-68 {
-  fill: #fff;
   font-family: "Fredoka", "Trebuchet MS", sans-serif;
-  font-size: 30px;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+.graffiti .flame-swoosh { fill: #1aa3e0; stroke: #111; stroke-width: 3; }
+.graffiti .derby {
+  fill: #ffe14a;
+  stroke: #111;
+  stroke-width: 3;
+  paint-order: stroke fill;
+  font-family: "Fredoka", "Trebuchet MS", sans-serif;
+  font-size: 42px;
   font-weight: 700;
   letter-spacing: -1px;
+  transform: skewX(-12deg);
 }
-.graffiti .skull .cranium,
-.graffiti .skull .jaw {
-  fill: #f4f1ea;
-  stroke: #111;
-  stroke-width: 1.5;
-}
-.graffiti .skull .socket { fill: #111; }
-.graffiti .skull .bones {
+.graffiti .spray-x {
   fill: none;
-  stroke: #f4f1ea;
-  stroke-width: 3;
+  stroke: #ffe14a;
+  stroke-width: 8;
   stroke-linecap: round;
 }
+.graffiti .spray-drip {
+  fill: none;
+  stroke: #ffe14a;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.graffiti .tag {
+  fill: #111;
+  font-family: "Fredoka", "Trebuchet MS", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+.graffiti .number-68 {
+  fill: #fff;
+  stroke: #111;
+  stroke-width: 2;
+  paint-order: stroke fill;
+  font-family: "Fredoka", "Trebuchet MS", sans-serif;
+  font-size: 78px;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+.graffiti .door-line {
+  fill: none;
+  stroke: #111;
+  stroke-width: 3;
+  opacity: 0.35;
+}
+.chain path {
+  fill: none;
+  stroke: #9aa3ab;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.chain circle {
+  fill: none;
+  stroke: #c0c6cc;
+  stroke-width: 3;
+}
+.graffiti .handle { fill: #111; }
+.smoke-puff {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: puff 1.8s ease-out infinite;
+}
+.smoke-puff ellipse { fill: #9aa0a6; }
+.smoke-puff.s2 { animation-delay: 0.45s; }
+.smoke-puff.s3 { animation-delay: 0.9s; }
 
 .play {
   flex: 1 1 50%;
@@ -440,18 +572,54 @@ button {
   border: 0;
 }
 
-@keyframes bob {
+@keyframes body-bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(4px); }
+  50% { transform: translateY(7px); }
+}
+
+@keyframes coil-bounce {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.72); }
+}
+
+@keyframes arm-bounce {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(3deg); }
 }
 
 @keyframes hop {
   0% { transform: translateY(0) rotate(0deg); }
-  18% { transform: translateY(2px) rotate(-3deg); }
-  46% { transform: translateY(-78px) rotate(-11deg); }
-  64% { transform: translateY(-36px) rotate(7deg); }
-  82% { transform: translateY(0) rotate(0deg); }
+  16% { transform: translateY(4px) rotate(-2deg); }
+  42% { transform: translateY(-86px) rotate(-10deg); }
+  62% { transform: translateY(-34px) rotate(6deg); }
+  78% { transform: translateY(6px) rotate(-1deg); }
   100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes body-jump {
+  0% { transform: translateY(0); }
+  16% { transform: translateY(10px); }
+  42% { transform: translateY(-12px); }
+  62% { transform: translateY(-4px); }
+  78% { transform: translateY(14px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes coil-jump {
+  0% { transform: scaleY(1); }
+  16% { transform: scaleY(0.55); }
+  42% { transform: scaleY(1.2); }
+  62% { transform: scaleY(1.05); }
+  78% { transform: scaleY(0.48); }
+  100% { transform: scaleY(1); }
+}
+
+@keyframes arm-jump {
+  0% { transform: rotate(0deg); }
+  16% { transform: rotate(8deg); }
+  42% { transform: rotate(-6deg); }
+  78% { transform: rotate(10deg); }
+  100% { transform: rotate(0deg); }
 }
 
 @keyframes ramp-pass {
@@ -474,10 +642,14 @@ button {
 }
 
 @keyframes wheel-fall {
-  to {
-    transform: translateY(78px) rotate(48deg);
-    opacity: 0;
-  }
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-28px, 110px) rotate(-160deg); opacity: 0; }
+}
+
+@keyframes puff {
+  0% { transform: translate(8px, 10px) scale(0.5); opacity: 0; }
+  30% { opacity: 0.75; }
+  100% { transform: translate(-22px, -26px) scale(1.35); opacity: 0; }
 }
 
 @keyframes pop {
@@ -487,12 +659,19 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .truck-rig.driving,
+  .truck-rig.driving .body-float,
+  .truck-rig.driving .coil,
+  .truck-rig.driving .arm,
+  .truck-rig.jumping,
+  .truck-rig.jumping .body-float,
+  .truck-rig.jumping .coil,
+  .truck-rig.jumping .arm,
   .spin,
   .lanes,
   .cloud,
-  .truck-rig.jumping,
-  .road.jumping .ramp {
+  .road.jumping .ramp,
+  .wheel.gone,
+  .smoke-puff {
     animation: none;
   }
 }
