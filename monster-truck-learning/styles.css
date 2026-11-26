@@ -176,22 +176,22 @@ button {
 .ramp {
   position: absolute;
   z-index: 1;
-  left: 62%;
-  bottom: 18%;
-  width: 116px;
-  height: 58px;
+  left: 50%;
+  bottom: -20%;
+  width: min(140%, 560px);
   opacity: 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    #1b1b1b 0 10px,
-    #f2d15a 10px 20px
-  );
-  clip-path: polygon(0 100%, 100% 100%, 100% 0);
-  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.28));
+  pointer-events: none;
+}
+
+.ramp img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .road.jumping .ramp {
-  animation: ramp-pass 1.2s linear forwards;
+  animation: ramp-pass 1.45s linear forwards;
 }
 
 .truck-anchor {
@@ -696,9 +696,9 @@ button {
 }
 
 @keyframes ramp-pass {
-  0% { transform: translateX(42vw); opacity: 1; }
-  42% { transform: translateX(-20vw); opacity: 1; }
-  100% { transform: translateX(-105vw); opacity: 1; }
+  0% { transform: translateX(70vw); opacity: 1; }
+  35% { transform: translateX(-10%); opacity: 1; }
+  100% { transform: translateX(calc(-100% - 110vw)); opacity: 1; }
 }
 
 @keyframes scroll {

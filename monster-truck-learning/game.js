@@ -232,16 +232,11 @@ function playJump() {
   const settle = () => {
     if (settled) return;
     settled = true;
-    truckRig.removeEventListener("animationend", onEnd);
     window.clearTimeout(timer);
     finishJump();
   };
-  const onEnd = (event) => {
-    if (event.target !== truckRig || event.animationName !== "hop") return;
-    settle();
-  };
-  const timer = window.setTimeout(settle, 1300);
-  truckRig.addEventListener("animationend", onEnd);
+  // Wait for the ramp to scroll fully off-screen before clearing the jump.
+  const timer = window.setTimeout(settle, 1550);
 }
 
 function dropWheel() {
