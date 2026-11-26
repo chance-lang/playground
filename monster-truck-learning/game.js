@@ -184,21 +184,9 @@ function playJump() {
   truckRig.addEventListener("animationend", onEnd);
 }
 
-const AXLE = {
-  "wheel-br": ["rearWheel", "loose"],
-  "wheel-bl": ["rearWheel", "gone"],
-  "wheel-fr": ["frontWheel", "loose"],
-  "wheel-fl": ["frontWheel", "gone"],
-};
-
 function dropWheel() {
   const index = 4 - wheelsLeft - 1;
-  const [axleId, state] = AXLE[WHEEL_IDS[index]];
-  const axle = document.getElementById(axleId);
-  if (axle) {
-    if (state === "gone") axle.classList.remove("loose");
-    axle.classList.add(state);
-  }
+  document.getElementById(WHEEL_IDS[index])?.classList.add("gone");
   if (truck) {
     truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
     truck.classList.add(`lost-${index + 1}`);
@@ -248,7 +236,7 @@ function resetGame() {
   wheelsLeft = 4;
   scoreEl.textContent = "0";
   if (truck) truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
-  for (const id of ["rearWheel", "frontWheel"]) {
+  for (const id of WHEEL_IDS) {
     document.getElementById(id)?.classList.remove("gone", "loose");
   }
   for (const icon of tireIcons) icon.classList.remove("off");
@@ -337,6 +325,100 @@ function cutTireHoles(svg, path) {
   path.setAttribute("mask", "url(#tireHoles)");
 }
 
+function hexToHsl(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return { h: h / 6, s, l };
+}
+
+function hslToHex(h, s, l) {
+  const hue = ((h % 1) + 1) % 1;
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const channel = (t) => {
+    let tt = t;
+    if (tt < 0) tt += 1;
+    if (tt > 1) tt -= 1;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  const byte = (value) => Math.round(Math.min(1, Math.max(0, value)) * 255).toString(16).padStart(2, "0");
+  return `#${byte(channel(hue + 1 / 3))}${byte(channel(hue))}${byte(channel(hue - 1 / 3))}`;
+}
+
+function tintColor(hex, hue) {
+  const { s, l } = hexToHsl(hex);
+  let sat = s;
+  let light = l;
+  if (l < 0.22) {
+    sat = 0.7;
+    light = 0.32 + l * 0.35;
+  } else if (s < 0.2) {
+    sat = 0.55;
+  } else {
+    sat = Math.min(0.92, Math.max(s, 0.6));
+  }
+  return hslToHex(hue, sat, light);
+}
+
+function recolorPaint(value, hue, prefix, svg, grads) {
+  if (!value) return value;
+  if (/^#[0-9a-fA-F]{6}$/.test(value)) return tintColor(value, hue);
+  const match = value.match(/^url\(#([^)]+)\)$/);
+  if (!match) return value;
+  const nextId = `${prefix}-${match[1]}`;
+  if (!grads.has(match[1])) {
+    const original = svg.querySelector(`[id="${match[1]}"]`);
+    if (original) {
+      const clone = original.cloneNode(true);
+      clone.id = nextId;
+      for (const stop of clone.querySelectorAll("stop")) {
+        const color = stop.getAttribute("stop-color");
+        if (color && /^#[0-9a-fA-F]{6}$/.test(color)) {
+          stop.setAttribute("stop-color", tintColor(color, hue));
+        }
+      }
+      original.parentNode.appendChild(clone);
+    }
+    grads.set(match[1], nextId);
+  }
+  return `url(#${nextId})`;
+}
+
+function recolorWheel(svg, wheel, prefix, hue) {
+  const grads = new Map();
+  for (const el of wheel.querySelectorAll("[fill], [stroke]")) {
+    for (const attr of ["fill", "stroke"]) {
+      const value = el.getAttribute(attr);
+      if (!value) continue;
+      el.setAttribute(attr, recolorPaint(value, hue, prefix, svg, grads));
+    }
+  }
+}
+
+function mountCopy(svg, source, id, hue, dx, dy) {
+  const copy = source.cloneNode(true);
+  copy.id = id;
+  recolorWheel(svg, copy, id, hue);
+  const slot = document.createElementNS(SVG_NS, "g");
+  slot.setAttribute("transform", `translate(${dx} ${dy})`);
+  slot.appendChild(copy);
+  return slot;
+}
+
 function makeWheel(id) {
   const wheel = document.createElementNS(SVG_NS, "g");
   wheel.id = id;
@@ -372,6 +454,12 @@ async function loadTruck() {
     if (path.getAttribute("fill") === "#161625") cutTireHoles(svg, path);
   }
 
+  const rearLeft = mountCopy(svg, rear.wheel, "wheel-br", 210 / 360, -50, -12);
+  const frontLeft = mountCopy(svg, front.wheel, "wheel-fr", 132 / 360, -50, -12);
+  rear.wheel.id = "wheel-bl";
+  front.wheel.id = "wheel-fl";
+  svg.appendChild(rearLeft);
+  svg.appendChild(frontLeft);
   svg.appendChild(body);
   svg.appendChild(rear.wheel);
   svg.appendChild(front.wheel);
