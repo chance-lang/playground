@@ -6,7 +6,7 @@ const scoreEl = document.querySelector("#score");
 const choicesEl = document.querySelector("#choices");
 const promptEl = document.querySelector("#prompt");
 const tiresEl = document.querySelector("#tires");
-const truck = document.querySelector("#truck");
+let truck = null;
 const truckRig = document.querySelector("#truckRig");
 const road = document.querySelector("#road");
 const replayBtn = document.querySelector("#replay");
@@ -184,11 +184,25 @@ function playJump() {
   truckRig.addEventListener("animationend", onEnd);
 }
 
+const AXLE = {
+  "wheel-br": ["rearWheel", "loose"],
+  "wheel-bl": ["rearWheel", "gone"],
+  "wheel-fr": ["frontWheel", "loose"],
+  "wheel-fl": ["frontWheel", "gone"],
+};
+
 function dropWheel() {
   const index = 4 - wheelsLeft - 1;
-  document.getElementById(WHEEL_IDS[index]).classList.add("gone");
-  truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
-  truck.classList.add(`lost-${index + 1}`);
+  const [axleId, state] = AXLE[WHEEL_IDS[index]];
+  const axle = document.getElementById(axleId);
+  if (axle) {
+    if (state === "gone") axle.classList.remove("loose");
+    axle.classList.add(state);
+  }
+  if (truck) {
+    truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
+    truck.classList.add(`lost-${index + 1}`);
+  }
   tireIcons[index].classList.add("off");
   updateTiresLabel();
 }
@@ -233,9 +247,9 @@ function resetGame() {
   score = 0;
   wheelsLeft = 4;
   scoreEl.textContent = "0";
-  truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
-  for (const id of WHEEL_IDS) {
-    document.getElementById(id).classList.remove("gone");
+  if (truck) truck.classList.remove("lost-1", "lost-2", "lost-3", "lost-4");
+  for (const id of ["rearWheel", "frontWheel"]) {
+    document.getElementById(id)?.classList.remove("gone", "loose");
   }
   for (const icon of tireIcons) icon.classList.remove("off");
   updateTiresLabel();
@@ -259,3 +273,113 @@ replayBtn.addEventListener("click", () => {
 againBtn.addEventListener("click", resetGame);
 
 preloadAudio();
+loadTruck();
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const REAR_HUB = { x: 359, y: 558, r: 178 };
+const FRONT_HUB = { x: 1034, y: 559, r: 178 };
+
+function pathStats(d) {
+  const nums = d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
+  if (!nums || nums.length < 4) return null;
+  let sx = 0;
+  let sy = 0;
+  let n = 0;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    const x = Number(nums[i]);
+    const y = Number(nums[i + 1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    sx += x;
+    sy += y;
+    n += 1;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  if (!n) return null;
+  return { x: sx / n, y: sy / n, w: maxX - minX, h: maxY - minY };
+}
+
+function nearHub(stats, hub) {
+  if (stats.w > 380 || stats.h > 380) return false;
+  const dx = stats.x - hub.x;
+  const dy = stats.y - hub.y;
+  return dx * dx + dy * dy < hub.r * hub.r;
+}
+
+function cutTireHoles(svg, path) {
+  const defs = svg.querySelector("defs") || svg.insertBefore(
+    document.createElementNS(SVG_NS, "defs"),
+    svg.firstChild
+  );
+  const mask = document.createElementNS(SVG_NS, "mask");
+  mask.id = "tireHoles";
+  mask.setAttribute("maskUnits", "userSpaceOnUse");
+  const rect = document.createElementNS(SVG_NS, "rect");
+  rect.setAttribute("width", "1376");
+  rect.setAttribute("height", "768");
+  rect.setAttribute("fill", "white");
+  mask.appendChild(rect);
+  for (const hub of [REAR_HUB, FRONT_HUB]) {
+    const circle = document.createElementNS(SVG_NS, "circle");
+    circle.setAttribute("cx", String(hub.x));
+    circle.setAttribute("cy", String(hub.y));
+    circle.setAttribute("r", "172");
+    circle.setAttribute("fill", "black");
+    mask.appendChild(circle);
+  }
+  defs.appendChild(mask);
+  path.setAttribute("mask", "url(#tireHoles)");
+}
+
+function makeWheel(id) {
+  const wheel = document.createElementNS(SVG_NS, "g");
+  wheel.id = id;
+  wheel.setAttribute("class", "wheel");
+  const spin = document.createElementNS(SVG_NS, "g");
+  spin.setAttribute("class", "spin");
+  wheel.appendChild(spin);
+  return { wheel, spin };
+}
+
+async function loadTruck() {
+  const mount = document.querySelector("#truckMount");
+  const response = await fetch("trucks/demo-derby.svg");
+  if (!response.ok) return;
+  const doc = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
+  const svg = doc.documentElement;
+  if (svg.tagName.toLowerCase() !== "svg") return;
+
+  const rear = makeWheel("rearWheel");
+  const front = makeWheel("frontWheel");
+  const body = document.createElementNS(SVG_NS, "g");
+  body.setAttribute("class", "body-float");
+
+  for (const path of [...svg.querySelectorAll("path")]) {
+    if (path.closest("defs")) continue;
+    const stats = pathStats(path.getAttribute("d") || "");
+    if (stats && nearHub(stats, REAR_HUB)) rear.spin.appendChild(path);
+    else if (stats && nearHub(stats, FRONT_HUB)) front.spin.appendChild(path);
+    else body.appendChild(path);
+  }
+
+  for (const path of body.querySelectorAll("path")) {
+    if (path.getAttribute("fill") === "#161625") cutTireHoles(svg, path);
+  }
+
+  svg.appendChild(body);
+  svg.appendChild(rear.wheel);
+  svg.appendChild(front.wheel);
+  svg.id = "truck";
+  svg.setAttribute("class", "truck");
+  svg.setAttribute("aria-hidden", "true");
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  mount.replaceChildren(document.importNode(svg, true));
+  truck = document.querySelector("#truck");
+}
