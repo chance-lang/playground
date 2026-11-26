@@ -543,6 +543,80 @@ button {
   line-height: 1.35;
 }
 
+.pool-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: min(100%, 22rem);
+  margin-top: 4px;
+}
+
+.pool-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 3px solid #1b2830;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pool-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.pool-toggle .switch {
+  position: relative;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: #5a6b78;
+  border: 3px solid #1b2830;
+  transition: background 0.2s ease;
+}
+
+.pool-toggle .switch::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #1b2830;
+  transition: transform 0.2s ease;
+}
+
+.pool-toggle input:checked + .switch {
+  background: #3ecf8e;
+}
+
+.pool-toggle input:checked + .switch::after {
+  transform: translateX(22px);
+}
+
+.pool-toggle:has(input:focus-visible) {
+  outline: 3px solid #ffe566;
+  outline-offset: 2px;
+}
+
+.overlay-btn:disabled {
+  opacity: 0.45;
+  box-shadow: 0 5px 0 #1b2830;
+  transform: none;
+}
+
 .overlay-btn {
   margin-top: 8px;
   min-width: 200px;

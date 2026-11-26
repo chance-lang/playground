@@ -1,6 +1,14 @@
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-const DIGITS = "0123456789".split("");
+const LOWER_LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const TEENS = ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
 const WHEEL_IDS = ["wheel-br", "wheel-bl", "wheel-fr", "wheel-fl"];
+const POOLS = {
+  letters: LETTERS,
+  lower: LOWER_LETTERS,
+  digits: DIGITS,
+  teens: TEENS,
+};
 
 const scoreEl = document.querySelector("#score");
 const choicesEl = document.querySelector("#choices");
@@ -12,12 +20,13 @@ const road = document.querySelector("#road");
 const replayBtn = document.querySelector("#replay");
 const startOverlay = document.querySelector("#start");
 const startBtn = document.querySelector("#startBtn");
+const poolToggles = [...document.querySelectorAll("input[data-pool]")];
 const gameOver = document.querySelector("#gameover");
 const againBtn = document.querySelector("#again");
 const finalScore = document.querySelector("#finalScore");
 const tireIcons = [...tiresEl.children];
 
-const DIGIT_WORDS = {
+const NUMBER_WORDS = {
   0: "zero",
   1: "one",
   2: "two",
@@ -28,6 +37,17 @@ const DIGIT_WORDS = {
   7: "seven",
   8: "eight",
   9: "nine",
+  10: "ten",
+  11: "eleven",
+  12: "twelve",
+  13: "thirteen",
+  14: "fourteen",
+  15: "fifteen",
+  16: "sixteen",
+  17: "seventeen",
+  18: "eighteen",
+  19: "nineteen",
+  20: "twenty",
 };
 
 let score = 0;
@@ -46,15 +66,21 @@ function shuffle(items) {
   return list;
 }
 
+function audioKey(value) {
+  const text = String(value);
+  if (/^[a-z]$/.test(text)) return text.toUpperCase();
+  return text;
+}
+
 function audioPath(value) {
-  return `audio/${encodeURIComponent(String(value))}.mp3`;
+  return `audio/${encodeURIComponent(audioKey(value))}.mp3`;
 }
 
 function getClip(value) {
-  const key = String(value);
+  const key = audioKey(value);
   let clip = audioCache.get(key);
   if (!clip) {
-    clip = new Audio(audioPath(key));
+    clip = new Audio(audioPath(value));
     clip.preload = "auto";
     audioCache.set(key, clip);
   }
@@ -62,7 +88,7 @@ function getClip(value) {
 }
 
 function preloadAudio() {
-  for (const value of [...DIGITS, ...LETTERS]) {
+  for (const value of [...DIGITS, ...TEENS, ...LETTERS]) {
     getClip(value);
   }
 }
@@ -79,13 +105,14 @@ function stopSpeech() {
 }
 
 function spokenPhrase(value) {
-  if (Object.prototype.hasOwnProperty.call(DIGIT_WORDS, value)) {
-    return DIGIT_WORDS[value];
+  const text = String(value);
+  if (Object.prototype.hasOwnProperty.call(NUMBER_WORDS, text)) {
+    return NUMBER_WORDS[text];
   }
-  if (/^[A-Z]$/i.test(value)) {
-    return value.toUpperCase();
+  if (/^[A-Z]$/i.test(text)) {
+    return text.toUpperCase();
   }
-  return String(value);
+  return text;
 }
 
 function speakFallback(value) {
@@ -142,8 +169,41 @@ function renderChoices(choices) {
   }
 }
 
+function poolEnabled(name) {
+  return poolToggles.some((box) => box.dataset.pool === name && box.checked);
+}
+
+function activePools() {
+  const pools = [];
+  for (const [name, values] of Object.entries(POOLS)) {
+    if (!poolEnabled(name)) continue;
+    if (name === "digits") {
+      pools.push(values.includes("0") ? values : ["0", ...values]);
+    } else {
+      pools.push(values);
+    }
+  }
+  return pools;
+}
+
+function syncPoolToggles(source) {
+  const name = source.dataset.pool;
+  for (const box of poolToggles) {
+    if (box.dataset.pool === name) box.checked = source.checked;
+  }
+  syncActionButtons();
+}
+
+function syncActionButtons() {
+  const ready = activePools().length > 0;
+  startBtn.disabled = !ready;
+  againBtn.disabled = !ready;
+}
+
 function nextRound() {
-  const pool = Math.random() < 0.5 ? LETTERS : DIGITS;
+  const pools = activePools();
+  if (!pools.length) return;
+  const pool = pools[Math.floor(Math.random() * pools.length)];
   const picked = shuffle(pool);
   target = picked[0];
   const choices = shuffle(picked.slice(0, 3));
@@ -246,7 +306,13 @@ function resetGame() {
   nextRound();
 }
 
+for (const box of poolToggles) {
+  box.addEventListener("change", () => syncPoolToggles(box));
+}
+syncActionButtons();
+
 startBtn.addEventListener("click", () => {
+  if (!activePools().length) return;
   startOverlay.hidden = true;
   replayBtn.disabled = false;
   preloadAudio();
@@ -258,7 +324,10 @@ replayBtn.addEventListener("click", () => {
   speak(target);
 });
 
-againBtn.addEventListener("click", resetGame);
+againBtn.addEventListener("click", () => {
+  if (!activePools().length) return;
+  resetGame();
+});
 
 preloadAudio();
 loadTruck();
