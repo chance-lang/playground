@@ -11,7 +11,7 @@ Portrait screen, `100dvh`, safe-area padding, no page scroll.
 
 ## Round rules
 
-Each round is either digits `0–9` or letters `A–Z` (never mixed in one round). Pick one target, two different wrong choices, shuffle the three buttons, then play a clear pre-recorded clip from `audio/` (browser speech is only a fallback).
+Each round is either digits `0–9` or letters `A–Z` (never mixed in one round). Pick one target, two different wrong choices, shuffle the three buttons, then play a clear pre-recorded clip from `audio/default/` (browser speech is only a fallback).
 
 - **Correct:** score +1, ignore taps during the jump, play the ramp animation, then a new round while the truck returns to the drive loop. Wheels stay as they are.
 - **Wrong:** detach one wheel and keep driving. A new prompt starts immediately. At 0 wheels, show the score and a Play again button that restores four wheels and resets the score.
@@ -23,6 +23,30 @@ All CSS on one SVG, no image assets.
 - **Driving:** road stripes scroll, body bobs, remaining wheels spin. Each lost wheel is hidden in order (back-right, back-left, front-right, front-left). The body tilts and sits lower as wheels disappear so it still looks like it is rolling.
 - **Ramp:** a ramp slides in ahead of the truck, the truck follows a short arc up and down (about 1.2s), then the ramp leaves and the drive loop resumes.
 
+## Prompt audio (`audio/default/`)
+
+Pre-recorded MP3s for digits, teens, and letters. Browser `speechSynthesis` is fallback only. Voice packs live under `audio/<pack>/`; the game loads `audio/default/`.
+
+## Game SFX (`audio/sfx/`)
+
+Correct-answer feedback uses real clips (not WebAudio tones):
+
+- `correct-rev.mp3` — Casper “Monster Truck Rev” (`engine-monster-rev`, deep rising/falling V8-style roar; free under Casper sound-effects license); playback capped at **1.2s**
+- `correct-whoosh.mp3` — takeoff whoosh layered ~0.45s in, also ending by 1.2s
+
+Crash impact SFX are still synthesized in `game.js`.
+
+**How they were generated (keep new clips matching this):** Google Translate TTS, not a named Cloud TTS / WaveNet / Neural2 voice.
+
+```
+https://translate.googleapis.com/translate_tts?client=gtx&tl=en&q=<phrase>
+```
+
+- Language: generic English (`tl=en`) — Translate’s default “Listen” speaker.
+- Digits/teens use spoken words (`zero`, `eleven`, …). Letters use the letter name (`A`, `B`, …).
+- **Z is Canadian:** phrase `zed` (file still `audio/default/Z.mp3`). TTS fallback in `game.js` also maps Z → `zed`.
+- Download with a normal browser User-Agent; save as `audio/default/<key>.mp3`.
+
 ## Files
 
 All of these live in `monster-truck-learning/`:
@@ -30,6 +54,7 @@ All of these live in `monster-truck-learning/`:
 - `index.html` — viewport, scene, three buttons, overlays
 - `styles.css` — mobile layout and truck/road/ramp keyframes
 - `game.js` — rounds, scoring, wheel state, speech, animation lock
+- `audio/default/` — Google Translate TTS MP3s (see above)
 - `.nojekyll` — tells Pages to serve the folder as-is
 
 ## Hosting

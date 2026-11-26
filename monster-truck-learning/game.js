@@ -25,6 +25,9 @@ const tiresEl = document.querySelector("#tires");
 let truck = null;
 const truckRig = document.querySelector("#truckRig");
 const road = document.querySelector("#road");
+const arenaTrack = document.querySelector("#arenaTrack");
+const crashFx = document.querySelector("#crashFx");
+const barricade = document.querySelector(".barricade");
 const replayBtn = document.querySelector("#replay");
 const startOverlay = document.querySelector("#start");
 const startBtn = document.querySelector("#startBtn");
@@ -33,6 +36,8 @@ const gameOver = document.querySelector("#gameover");
 const againBtn = document.querySelector("#again");
 const finalScore = document.querySelector("#finalScore");
 const tireIcons = [...tiresEl.children];
+const ARENA_SCROLL_MS = 12000;
+const WRECK_HOLD_MS = 3000;
 
 const NUMBER_WORDS = {
   0: "zero",
@@ -64,6 +69,12 @@ let target = "";
 let locked = false;
 let currentAudio = null;
 const audioCache = new Map();
+let sfxCtx = null;
+const SFX = {
+  correctRev: "audio/sfx/correct-rev.mp3",
+  correctWhoosh: "audio/sfx/correct-whoosh.mp3",
+};
+const sfxCache = new Map();
 
 function shuffle(items) {
   const list = [...items];
@@ -81,7 +92,7 @@ function audioKey(value) {
 }
 
 function audioPath(value) {
-  return `audio/${encodeURIComponent(audioKey(value))}.mp3`;
+  return `audio/default/${encodeURIComponent(audioKey(value))}.mp3`;
 }
 
 function getClip(value) {
@@ -95,10 +106,50 @@ function getClip(value) {
   return clip;
 }
 
+function getSfx(path) {
+  let clip = sfxCache.get(path);
+  if (!clip) {
+    clip = new Audio(path);
+    clip.preload = "auto";
+    sfxCache.set(path, clip);
+  }
+  return clip;
+}
+
+function playSfxFile(path, { volume = 1, whenMs = 0, durationMs = null } = {}) {
+  const play = () => {
+    const clip = getSfx(path).cloneNode(true);
+    clip.volume = volume;
+    const result = clip.play();
+    if (result && typeof result.catch === "function") result.catch(() => {});
+    if (durationMs != null && durationMs > 0) {
+      const fadeMs = Math.min(180, durationMs * 0.2);
+      const fadeAt = Math.max(0, durationMs - fadeMs);
+      window.setTimeout(() => {
+        const steps = 6;
+        let step = 0;
+        const from = clip.volume;
+        const tick = window.setInterval(() => {
+          step += 1;
+          clip.volume = Math.max(0, from * (1 - step / steps));
+          if (step >= steps) {
+            window.clearInterval(tick);
+            clip.pause();
+            clip.currentTime = 0;
+          }
+        }, Math.max(16, fadeMs / steps));
+      }, fadeAt);
+    }
+  };
+  if (whenMs > 0) window.setTimeout(play, whenMs);
+  else play();
+}
+
 function preloadAudio() {
   for (const value of [...DIGITS, ...TEENS, ...LETTERS]) {
     getClip(value);
   }
+  for (const path of Object.values(SFX)) getSfx(path);
 }
 
 function stopSpeech() {
@@ -117,6 +168,7 @@ function spokenPhrase(value) {
   if (Object.prototype.hasOwnProperty.call(NUMBER_WORDS, text)) {
     return NUMBER_WORDS[text];
   }
+  if (/^z$/i.test(text)) return "zed";
   if (/^[A-Z]$/i.test(text)) {
     return text.toUpperCase();
   }
@@ -151,6 +203,166 @@ function speak(value) {
       speakFallback(value);
     });
   }
+}
+
+function ensureSfx() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!sfxCtx) sfxCtx = new AC();
+  if (sfxCtx.state === "suspended") sfxCtx.resume();
+  return sfxCtx;
+}
+
+function playTone(ctx, { freq, start, dur, type = "sine", gain = 0.2, slideTo = null }) {
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (slideTo != null) {
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), start + dur);
+  }
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(gain, start + 0.02);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  osc.connect(amp);
+  amp.connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + dur + 0.02);
+}
+
+function playNoiseBurst(ctx, { start, dur, gain = 0.35, filterFreq = 900, filterType = "bandpass", slideTo = null }) {
+  const rate = ctx.sampleRate;
+  const frames = Math.max(1, Math.floor(rate * dur));
+  const buffer = ctx.createBuffer(1, frames, rate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i += 1) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = filterType;
+  filter.frequency.setValueAtTime(filterFreq, start);
+  if (slideTo != null) {
+    filter.frequency.exponentialRampToValueAtTime(Math.max(80, slideTo), start + dur);
+  }
+  filter.Q.value = 0.7;
+  const amp = ctx.createGain();
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(gain, start + 0.03);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  src.connect(filter);
+  filter.connect(amp);
+  amp.connect(ctx.destination);
+  src.start(start);
+  src.stop(start + dur);
+}
+
+function playCorrectSfx() {
+  // Real monster-truck engine rev + takeoff whoosh, capped at 1.2s.
+  playSfxFile(SFX.correctRev, { volume: 0.95, durationMs: 1200 });
+  playSfxFile(SFX.correctWhoosh, { volume: 0.55, whenMs: 450, durationMs: 750 });
+}
+
+function playCrashSfx() {
+  const ctx = ensureSfx();
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  // Delayed to the barricade impact / tire pop beat.
+  const hit = t + 0.28;
+  // Explosion boom.
+  playTone(ctx, {
+    freq: 95,
+    start: hit,
+    dur: 0.55,
+    type: "sawtooth",
+    gain: 0.34,
+    slideTo: 36,
+  });
+  playTone(ctx, {
+    freq: 180,
+    start: hit,
+    dur: 0.28,
+    type: "square",
+    gain: 0.14,
+    slideTo: 55,
+  });
+  playNoiseBurst(ctx, { start: hit, dur: 0.35, gain: 0.5, filterFreq: 520 });
+  playNoiseBurst(ctx, { start: hit + 0.04, dur: 0.45, gain: 0.28, filterFreq: 1600 });
+  // Metal parts clatter.
+  playTone(ctx, {
+    freq: 520,
+    start: hit + 0.06,
+    dur: 0.12,
+    type: "triangle",
+    gain: 0.1,
+    slideTo: 180,
+  });
+  playTone(ctx, {
+    freq: 740,
+    start: hit + 0.14,
+    dur: 0.1,
+    type: "square",
+    gain: 0.07,
+    slideTo: 220,
+  });
+  // Tire pop / hiss.
+  playTone(ctx, {
+    freq: 260,
+    start: hit + 0.02,
+    dur: 0.1,
+    type: "sine",
+    gain: 0.16,
+    slideTo: 90,
+  });
+  playNoiseBurst(ctx, { start: hit + 0.02, dur: 0.22, gain: 0.32, filterFreq: 2400 });
+}
+
+function spawnCrashFx() {
+  if (!crashFx) return;
+  crashFx.classList.remove("boom-on");
+  crashFx.replaceChildren();
+
+  const boom = document.createElement("div");
+  boom.className = "boom";
+  const flash = document.createElement("div");
+  flash.className = "flash";
+  const ring = document.createElement("div");
+  ring.className = "smoke-ring";
+  crashFx.append(boom, flash, ring);
+
+  const kinds = [
+    "spring",
+    "spring",
+    "spring",
+    "bolt",
+    "bolt",
+    "nut",
+    "nut",
+    "panel",
+    "panel",
+    "bolt",
+  ];
+  kinds.forEach((kind, i) => {
+    const el = document.createElement("div");
+    el.className = `debris ${kind}`;
+    const angle = -110 + i * 22 + (i % 3) * 8;
+    const dist = 90 + (i % 4) * 36 + (i % 2) * 20;
+    const rad = (angle * Math.PI) / 180;
+    const dx = Math.cos(rad) * dist;
+    const dy = Math.sin(rad) * dist - 40 - (i % 3) * 18;
+    const spin = (i % 2 === 0 ? 1 : -1) * (160 + i * 40);
+    el.style.setProperty("--dx", `${dx}px`);
+    el.style.setProperty("--dy", `${dy}px`);
+    el.style.setProperty("--spin", `${spin}deg`);
+    el.style.animationDuration = `${0.55 + (i % 4) * 0.12}s`;
+    el.style.animationDelay = `${0.28 + (i % 5) * 0.02}s`;
+    crashFx.append(el);
+  });
+
+  void crashFx.offsetWidth;
+  crashFx.classList.add("boom-on");
+  barricade?.classList.add("hit");
 }
 
 function setLocked(value) {
@@ -234,6 +446,7 @@ function playJump() {
   void truckRig.offsetWidth;
   road.classList.add("jumping");
   truckRig.classList.add("jumping");
+  playCorrectSfx();
 
   let settled = false;
   const settle = () => {
@@ -246,26 +459,67 @@ function playJump() {
   const timer = window.setTimeout(settle, 1600);
 }
 
+function arenaScrollX() {
+  if (!arenaTrack) return 0;
+  const t = getComputedStyle(arenaTrack).transform;
+  if (!t || t === "none") return 0;
+  return new DOMMatrixReadOnly(t).m41;
+}
+
+function slowArenaToStop(durationMs = WRECK_HOLD_MS) {
+  if (!arenaTrack) return;
+  const x = arenaScrollX();
+  const loopWidth = arenaTrack.scrollWidth / 2;
+  const speed = loopWidth > 0 ? loopWidth / ARENA_SCROLL_MS : 0;
+  // Ease-out coasts about half the distance full speed would cover.
+  const coast = speed * durationMs * 0.5;
+  arenaTrack.style.animation = "none";
+  arenaTrack.style.transition = "none";
+  arenaTrack.style.transform = `translateX(${x}px)`;
+  void arenaTrack.offsetWidth;
+  arenaTrack.style.transition = `transform ${durationMs}ms cubic-bezier(0.05, 0.85, 0.2, 1)`;
+  arenaTrack.style.transform = `translateX(${x - coast}px)`;
+}
+
+function resumeArenaScroll() {
+  if (!arenaTrack) return;
+  arenaTrack.style.transition = "none";
+  arenaTrack.style.transform = "";
+  arenaTrack.style.animation = "";
+  void arenaTrack.offsetWidth;
+}
+
 function finishCrash() {
   truckRig.classList.remove("crashing");
   road.classList.remove("crashing");
+  clearCrashFx();
   truckRig.classList.add("driving");
   if (wheelsLeft === 0) {
     truckRig.classList.remove("dragging");
     truckRig.classList.add("wrecked", "front-fire");
-    window.setTimeout(showGameOver, 3000);
+    slowArenaToStop(WRECK_HOLD_MS);
+    window.setTimeout(showGameOver, WRECK_HOLD_MS);
     return;
   }
   setLocked(false);
   nextRound();
 }
 
+function clearCrashFx() {
+  crashFx?.classList.remove("boom-on");
+  crashFx?.replaceChildren();
+  barricade?.classList.remove("hit");
+}
+
 function playCrash() {
   truckRig.classList.remove("driving", "jumping", "crashing");
   road.classList.remove("jumping", "crashing");
+  clearCrashFx();
   void truckRig.offsetWidth;
   road.classList.add("crashing");
   truckRig.classList.add("crashing");
+  playCrashSfx();
+  spawnCrashFx();
 
   const dropIndex = 4 - wheelsLeft - 1;
   // Kick fire on just before each tire falls off.
@@ -368,6 +622,8 @@ function resetGame() {
   }
   for (const icon of tireIcons) icon.classList.remove("off");
   updateTiresLabel();
+  resumeArenaScroll();
+  clearCrashFx();
   gameOver.hidden = true;
   setLocked(false);
   nextRound();
@@ -382,6 +638,7 @@ startBtn.addEventListener("click", () => {
   if (!activePools().length) return;
   startOverlay.hidden = true;
   replayBtn.disabled = false;
+  ensureSfx();
   preloadAudio();
   nextRound();
 });
@@ -393,6 +650,7 @@ replayBtn.addEventListener("click", () => {
 
 againBtn.addEventListener("click", () => {
   if (!activePools().length) return;
+  ensureSfx();
   resetGame();
 });
 
