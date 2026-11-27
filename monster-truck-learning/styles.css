@@ -98,22 +98,48 @@ button {
 }
 
 .speaker {
-  width: 44px;
-  height: 44px;
+  width: 84px;
+  height: 84px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  border: 3px solid var(--ink);
-  background: #fff;
+  background: transparent;
   color: var(--ink);
   display: grid;
   place-items: center;
-  box-shadow: 0 3px 0 var(--ink);
+  box-shadow: none;
+  overflow: visible;
+  filter: drop-shadow(0 3px 0 rgba(27, 40, 48, 0.55));
 }
 
-.speaker svg { width: 22px; height: 22px; }
+.speaker img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
 
 .speaker:disabled { opacity: 0.45; }
 
-.speaker:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.replay-sound {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: max(calc(8px + env(safe-area-inset-top) + 52px), calc(26% - 200px));
+  transform: translateX(-50%);
+}
+
+.speaker:not(:disabled):active {
+  transform: translateY(3px);
+  filter: drop-shadow(0 1px 0 rgba(27, 40, 48, 0.55));
+}
+
+.replay-sound:not(:disabled):active {
+  transform: translateX(-50%) translateY(3px);
+  filter: drop-shadow(0 1px 0 rgba(27, 40, 48, 0.55));
+}
 
 .arena {
   position: absolute;
@@ -744,6 +770,12 @@ button {
   font-weight: 700;
   color: var(--ink);
   letter-spacing: 0.02em;
+}
+
+.choice.wordy {
+  font-size: clamp(1.55rem, 5.2vh, 2.6rem);
+  letter-spacing: 0;
+  padding: 0 10px;
 }
 
 .choice:nth-child(2) { background: var(--choice-2); }

@@ -21,13 +21,10 @@
           <span class="tire-icon" title="Front right"></span>
           <span class="tire-icon" title="Front left"></span>
         </div>
-        <button type="button" id="replay" class="speaker" aria-label="Hear the letter or number again" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M3 9v6h4l5 4V5L7 9H3z"/>
-            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 010 6M18.5 7a7 7 0 010 10"/>
-          </svg>
-        </button>
       </div>
+      <button type="button" id="replay" class="speaker replay-sound" aria-label="Replay the letter, number, or word" disabled>
+        <img src="img/replay-sound.png" alt="" draggable="false">
+      </button>
 
       <div class="arena" aria-hidden="true">
         <div class="arena-track" id="arenaTrack">
@@ -62,7 +59,7 @@
     <div id="start" class="overlay">
       <p class="eyebrow">Listen, then tap</p>
       <h1>Monster Truck</h1>
-      <p class="blurb">A letter or number is spoken. Tap the one you hear. A miss knocks off a wheel.</p>
+      <p class="blurb">A letter, number, or sight word is spoken. Tap the one you hear. A miss knocks off a wheel.</p>
       <div class="pool-toggles" role="group" aria-label="What to practice">
         <label class="pool-toggle">
           <span>A–Z</span>
@@ -82,6 +79,16 @@
         <label class="pool-toggle">
           <span>10–20</span>
           <input type="checkbox" data-pool="teens">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>Sight Words</span>
+          <input type="checkbox" data-pool="sight">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>Small Words</span>
+          <input type="checkbox" data-pool="words">
           <span class="switch" aria-hidden="true"></span>
         </label>
       </div>
@@ -111,6 +118,16 @@
         <label class="pool-toggle">
           <span>10–20</span>
           <input type="checkbox" data-pool="teens">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>Sight words</span>
+          <input type="checkbox" data-pool="sight">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>Words</span>
+          <input type="checkbox" data-pool="words">
           <span class="switch" aria-hidden="true"></span>
         </label>
       </div>

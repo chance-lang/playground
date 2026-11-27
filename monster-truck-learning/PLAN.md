@@ -45,6 +45,8 @@ https://translate.googleapis.com/translate_tts?client=gtx&tl=en&q=<phrase>
 
 - Language: generic English (`tl=en`) — Translate’s default “Listen” speaker.
 - Digits/teens use spoken words (`zero`, `eleven`, …). Letters use the letter name (`A`, `B`, …).
+- Sight words use the word as spoken (`and`, `little`, …). File for display `a` is `sight-a.mp3` so it doesn’t clash with letter `A.mp3`; `I` reuses letter `I.mp3`.
+- Easy **Words** pool (`cat`, `dog`, …) uses the same `audio/default/<word>.mp3` naming; overlaps with sight words reuse the same clip.
 - **Z is Canadian:** phrase `zed` (file still `audio/default/Z.mp3`). TTS fallback in `game.js` also maps Z → `zed`.
 - Download with a normal browser User-Agent; save as `audio/default/<key>.mp3`.
 
