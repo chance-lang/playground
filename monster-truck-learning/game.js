@@ -131,6 +131,8 @@ let truck = null;
 const truckRig = document.querySelector("#truckRig");
 const road = document.querySelector("#road");
 const arenaTrack = document.querySelector("#arenaTrack");
+const arenaEl = document.querySelector(".arena");
+const arenaDog = document.querySelector("#arenaDog");
 const crashFx = document.querySelector("#crashFx");
 const barricade = document.querySelector(".barricade");
 const replayBtn = document.querySelector("#replay");
@@ -151,6 +153,7 @@ const againBtn = document.querySelector("#again");
 const finalScore = document.querySelector("#finalScore");
 const tireIcons = [...tiresEl.children];
 const ARENA_SCROLL_MS = 12000;
+const ARENA_DOG_EVERY_MS = 30000;
 const WRECK_HOLD_MS = 3000;
 const DICE2_SUMS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 const DICE3_SUMS = ["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"];
@@ -773,6 +776,81 @@ function resumeArenaScroll() {
   arenaTrack.style.transform = "";
   arenaTrack.style.animation = "";
   void arenaTrack.offsetWidth;
+  hideArenaDog();
+}
+
+let arenaDogTimer = 0;
+let arenaDogWatch = 0;
+let arenaDogWorldX = null;
+let arenaDogLastScrollX = 0;
+
+function hideArenaDog() {
+  if (arenaDogWatch) {
+    window.cancelAnimationFrame(arenaDogWatch);
+    arenaDogWatch = 0;
+  }
+  arenaDogWorldX = null;
+  if (!arenaDog) return;
+  arenaDog.style.transform = "";
+  arenaDog.hidden = true;
+}
+
+function stopArenaDogLoop() {
+  window.clearTimeout(arenaDogTimer);
+  arenaDogTimer = 0;
+  hideArenaDog();
+}
+
+function syncArenaDogFrame() {
+  arenaDogWatch = 0;
+  if (arenaDogWorldX == null || !arenaDog || arenaDog.hidden || !arenaTrack || !arenaEl) {
+    return;
+  }
+
+  const loopWidth = arenaTrack.scrollWidth / 2;
+  let scrollX = arenaScrollX();
+  // When the seamless loop restarts, scrollX jumps from ~-loopWidth back to 0.
+  // Shift the dog's world X the same amount so it stays glued to the backdrop.
+  if (loopWidth > 0 && scrollX - arenaDogLastScrollX > loopWidth * 0.25) {
+    arenaDogWorldX -= loopWidth;
+  }
+  arenaDogLastScrollX = scrollX;
+
+  const screenX = arenaDogWorldX + scrollX;
+  arenaDog.style.transform = `translateX(${screenX}px)`;
+
+  const dogW = arenaDog.getBoundingClientRect().width || 90;
+  if (screenX + dogW < -2) {
+    hideArenaDog();
+    scheduleArenaDog(ARENA_DOG_EVERY_MS);
+    return;
+  }
+
+  arenaDogWatch = window.requestAnimationFrame(syncArenaDogFrame);
+}
+
+function spawnArenaDog() {
+  if (!arenaDog || !arenaTrack || !arenaEl) return;
+  const loopWidth = arenaTrack.scrollWidth / 2;
+  if (loopWidth <= 0) return;
+
+  hideArenaDog();
+  arenaDog.hidden = false;
+
+  const scrollX = arenaScrollX();
+  const viewW = arenaEl.clientWidth;
+  // World X just past the right edge; screen X = worldX + scrollX.
+  arenaDogWorldX = -scrollX + viewW + 40;
+  arenaDogLastScrollX = scrollX;
+  arenaDog.style.transform = `translateX(${viewW + 40}px)`;
+  arenaDogWatch = window.requestAnimationFrame(syncArenaDogFrame);
+}
+
+function scheduleArenaDog(delayMs = ARENA_DOG_EVERY_MS) {
+  window.clearTimeout(arenaDogTimer);
+  arenaDogTimer = window.setTimeout(() => {
+    spawnArenaDog();
+  }, Math.max(4000, delayMs));
 }
 
 function finishCrash() {
@@ -914,6 +992,7 @@ function resetGame() {
   promptValue = "";
   gameOver.hidden = true;
   setLocked(false);
+  scheduleArenaDog(ARENA_DOG_EVERY_MS);
   nextRound();
 }
 
@@ -929,6 +1008,7 @@ startBtn.addEventListener("click", () => {
   replayBtn.disabled = false;
   preloadAudio();
   unlockAudio();
+  scheduleArenaDog(ARENA_DOG_EVERY_MS);
   nextRound();
 });
 
