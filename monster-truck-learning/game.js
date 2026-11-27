@@ -66,6 +66,38 @@ const WORDS = [
   "duck",
   "ball",
 ];
+const DICE2_ITEMS = (() => {
+  const items = [];
+  for (let a = 1; a <= 6; a += 1) {
+    for (let b = 1; b <= 6; b += 1) {
+      items.push(`${a}+${b}`);
+    }
+  }
+  return items;
+})();
+const DICE3_ITEMS = (() => {
+  const items = [];
+  for (let a = 1; a <= 6; a += 1) {
+    for (let b = 1; b <= 6; b += 1) {
+      for (let c = 1; c <= 6; c += 1) {
+        items.push(`${a}+${b}+${c}`);
+      }
+    }
+  }
+  return items;
+})();
+const DICE3_SUB_ITEMS = (() => {
+  const items = [];
+  for (let a = 1; a <= 6; a += 1) {
+    for (let b = 1; b <= 6; b += 1) {
+      for (let c = 1; c <= 6; c += 1) {
+        if (a + b - c < 0) continue;
+        items.push(`${a}+${b}-${c}`);
+      }
+    }
+  }
+  return items;
+})();
 const WHEEL_IDS = ["wheel-br", "wheel-bl", "wheel-fr", "wheel-fl"];
 const POOLS = {
   letters: LETTERS,
@@ -74,6 +106,9 @@ const POOLS = {
   teens: TEENS,
   sight: SIGHT_WORDS,
   words: WORDS,
+  dice2: DICE2_ITEMS,
+  dice3: DICE3_ITEMS,
+  dice3sub: DICE3_SUB_ITEMS,
 };
 // Sight-word "a" can't share letter A.mp3 on case-insensitive disks.
 const AUDIO_ALIASES = {
@@ -99,6 +134,11 @@ const arenaTrack = document.querySelector("#arenaTrack");
 const crashFx = document.querySelector("#crashFx");
 const barricade = document.querySelector(".barricade");
 const replayBtn = document.querySelector("#replay");
+const dicePrompt = document.querySelector("#dicePrompt");
+const dieA = document.querySelector("#dieA");
+const dieB = document.querySelector("#dieB");
+const dieC = document.querySelector("#dieC");
+const diceOpC = document.querySelector("#diceOpC");
 const startOverlay = document.querySelector("#start");
 const startBtn = document.querySelector("#startBtn");
 const poolToggles = [...document.querySelectorAll("input[data-pool]")];
@@ -108,6 +148,9 @@ const finalScore = document.querySelector("#finalScore");
 const tireIcons = [...tiresEl.children];
 const ARENA_SCROLL_MS = 12000;
 const WRECK_HOLD_MS = 3000;
+const DICE2_SUMS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+const DICE3_SUMS = ["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"];
+const DICE3_SUB_RESULTS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
 
 const NUMBER_WORDS = {
   0: "zero",
@@ -136,6 +179,7 @@ const NUMBER_WORDS = {
 let score = 0;
 let wheelsLeft = 4;
 let target = "";
+let promptValue = "";
 let locked = false;
 let currentAudio = null;
 const audioCache = new Map();
@@ -162,8 +206,43 @@ function audioKey(value) {
   if (Object.prototype.hasOwnProperty.call(AUDIO_ALIASES, text)) {
     return AUDIO_ALIASES[text];
   }
+  if (isDiceSub3Key(text)) return parseDiceSub3(text).clipKey;
+  if (/^\d+(\+\d+)+$/.test(text)) return text.replaceAll("+", "-plus-");
   if (/^[a-z]$/.test(text)) return text.toUpperCase();
   return text;
+}
+
+function parseDiceAdd(key) {
+  const faces = String(key).split("+").map(Number);
+  const sum = faces.reduce((total, face) => total + face, 0);
+  return {
+    faces,
+    sum: String(sum),
+    phrase: faces.join(" plus "),
+  };
+}
+
+function isDiceAddKey(value) {
+  return /^\d+(\+\d+)+$/.test(String(value));
+}
+
+function parseDiceSub3(key) {
+  const match = String(key).match(/^(\d+)\+(\d+)-(\d+)$/);
+  const a = Number(match[1]);
+  const b = Number(match[2]);
+  const c = Number(match[3]);
+  const left = a + b;
+  return {
+    faces: [a, b, c],
+    left,
+    result: String(left - c),
+    phrase: `${left} minus ${c}`,
+    clipKey: `${left}-minus-${c}`,
+  };
+}
+
+function isDiceSub3Key(value) {
+  return /^\d+\+\d+-\d+$/.test(String(value));
 }
 
 function audioPath(value) {
@@ -222,7 +301,16 @@ function playSfxFile(path, { volume = 1, whenMs = 0, durationMs = null } = {}) {
 }
 
 function preloadAudio() {
-  for (const value of [...DIGITS, ...TEENS, ...LETTERS, ...SIGHT_WORDS, ...WORDS]) {
+  for (const value of [
+    ...DIGITS,
+    ...TEENS,
+    ...LETTERS,
+    ...SIGHT_WORDS,
+    ...WORDS,
+    ...DICE2_ITEMS,
+    ...DICE3_ITEMS,
+    ...DICE3_SUB_ITEMS,
+  ]) {
     getClip(value);
   }
   for (const path of Object.values(SFX)) getSfx(path);
@@ -278,6 +366,8 @@ function stopSpeech() {
 
 function spokenPhrase(value) {
   const text = String(value);
+  if (isDiceSub3Key(text)) return parseDiceSub3(text).phrase;
+  if (isDiceAddKey(text)) return parseDiceAdd(text).phrase;
   if (Object.prototype.hasOwnProperty.call(NUMBER_WORDS, text)) {
     return NUMBER_WORDS[text];
   }
@@ -286,6 +376,68 @@ function spokenPhrase(value) {
     return text.toUpperCase();
   }
   return text;
+}
+
+function setDiceFace(el, face) {
+  if (!el) return;
+  el.dataset.face = String(face);
+}
+
+function setDiceExtraVisible(visible, op = "+") {
+  if (dieC) dieC.hidden = !visible;
+  if (diceOpC) {
+    diceOpC.hidden = !visible;
+    diceOpC.textContent = op;
+    diceOpC.setAttribute("aria-hidden", visible ? "false" : "true");
+  }
+}
+
+function showDicePrompt(faces, { op = "+", label = null } = {}) {
+  const [a, b, c] = faces;
+  setDiceFace(dieA, a);
+  setDiceFace(dieB, b);
+  const triple = faces.length >= 3;
+  const subtract = op === "-";
+  setDiceExtraVisible(triple, op);
+  if (triple) setDiceFace(dieC, c);
+  if (dicePrompt) {
+    dicePrompt.hidden = false;
+    dicePrompt.classList.toggle("triple", triple);
+    dicePrompt.classList.toggle("mode-add", !subtract);
+    dicePrompt.classList.toggle("mode-sub", subtract);
+    dicePrompt.setAttribute("aria-hidden", "false");
+    dicePrompt.setAttribute(
+      "aria-label",
+      label || (triple ? `${a} plus ${b} ${subtract ? "minus" : "plus"} ${c}` : `${a} plus ${b}`)
+    );
+  }
+}
+
+function hideDicePrompt() {
+  if (!dicePrompt) return;
+  dicePrompt.hidden = true;
+  dicePrompt.classList.remove("triple", "mode-add", "mode-sub");
+  dicePrompt.setAttribute("aria-hidden", "true");
+  dicePrompt.removeAttribute("aria-label");
+  setDiceExtraVisible(false, "+");
+}
+
+function diceAnswerChoices(correct, poolKeys, answerPool, answerOf) {
+  const choices = [correct];
+  const used = new Set([correct]);
+  for (const key of poolKeys) {
+    const answer = answerOf(key);
+    if (used.has(answer)) continue;
+    used.add(answer);
+    choices.push(answer);
+    if (choices.length === 3) return choices;
+  }
+  for (const answer of shuffle(answerPool)) {
+    if (used.has(answer)) continue;
+    choices.push(answer);
+    if (choices.length === 3) break;
+  }
+  return choices;
 }
 
 function speakFallback(value) {
@@ -459,11 +611,41 @@ function nextRound() {
   if (!pools.length) return;
   const pool = pools[Math.floor(Math.random() * pools.length)];
   const picked = shuffle(pool);
+
+  if (picked[0] && isDiceSub3Key(picked[0])) {
+    const roll = parseDiceSub3(picked[0]);
+    target = roll.result;
+    promptValue = picked[0];
+    promptEl.textContent = `${roll.faces[0]} + ${roll.faces[1]} − ${roll.faces[2]}`;
+    showDicePrompt(roll.faces, { op: "-", label: roll.phrase });
+    renderChoices(
+      shuffle(diceAnswerChoices(roll.result, picked, DICE3_SUB_RESULTS, (key) => parseDiceSub3(key).result))
+    );
+    speak(promptValue);
+    return;
+  }
+
+  if (picked[0] && isDiceAddKey(picked[0])) {
+    const roll = parseDiceAdd(picked[0]);
+    target = roll.sum;
+    promptValue = picked[0];
+    promptEl.textContent = roll.faces.join(" + ");
+    showDicePrompt(roll.faces, { op: "+" });
+    const sumPool = roll.faces.length >= 3 ? DICE3_SUMS : DICE2_SUMS;
+    renderChoices(
+      shuffle(diceAnswerChoices(roll.sum, picked, sumPool, (key) => parseDiceAdd(key).sum))
+    );
+    speak(promptValue);
+    return;
+  }
+
+  hideDicePrompt();
   target = picked[0];
+  promptValue = target;
   const choices = shuffle(picked.slice(0, 3));
   promptEl.textContent = target;
   renderChoices(choices);
-  speak(target);
+  speak(promptValue);
 }
 
 function finishJump() {
@@ -658,6 +840,8 @@ function resetGame() {
   updateTiresLabel();
   resumeArenaScroll();
   clearCrashFx();
+  hideDicePrompt();
+  promptValue = "";
   gameOver.hidden = true;
   setLocked(false);
   nextRound();
@@ -678,8 +862,8 @@ startBtn.addEventListener("click", () => {
 });
 
 replayBtn.addEventListener("click", () => {
-  if (!target || gameOver.hidden === false) return;
-  speak(target);
+  if (!promptValue || gameOver.hidden === false) return;
+  speak(promptValue);
 });
 
 againBtn.addEventListener("click", () => {

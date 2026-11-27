@@ -47,6 +47,9 @@ https://translate.googleapis.com/translate_tts?client=gtx&tl=en&q=<phrase>
 - Digits/teens use spoken words (`zero`, `eleven`, …). Letters use the letter name (`A`, `B`, …).
 - Sight words use the word as spoken (`and`, `little`, …). File for display `a` is `sight-a.mp3` so it doesn’t clash with letter `A.mp3`; `I` reuses letter `I.mp3`.
 - Easy **Words** pool (`cat`, `dog`, …) uses the same `audio/default/<word>.mp3` naming; overlaps with sight words reuse the same clip.
+- **2 Dice Addition** uses all faces `1+1` … `6+6` (36). Spoken as `N plus M` (`audio/default/N-plus-M.mp3`). UI shows dice + under the replay button; choices are the sum.
+- **3 Dice Addition** uses all faces `1+1+1` … `6+6+6` (216). Spoken as `N plus M plus P` (`audio/default/N-plus-M-plus-P.mp3`). Same dice UI with a third die; choices are the sum.
+- **3 Dice Subtraction** uses `A+B-C` where `A+B-C >= 0`. UI shows three dice as `A + B − C`. Spoken as the simplified `(A+B) minus C` (`audio/default/L-minus-C.mp3`); choices are the difference.
 - **Z is Canadian:** phrase `zed` (file still `audio/default/Z.mp3`). TTS fallback in `game.js` also maps Z → `zed`.
 - Download with a normal browser User-Agent; save as `audio/default/<key>.mp3`.
 
