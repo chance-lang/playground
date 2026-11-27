@@ -2,12 +2,82 @@ const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const LOWER_LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const TEENS = ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"];
+const SIGHT_WORDS = [
+  "a",
+  "and",
+  "away",
+  "big",
+  "blue",
+  "can",
+  "come",
+  "down",
+  "find",
+  "for",
+  "funny",
+  "go",
+  "help",
+  "here",
+  "I",
+  "in",
+  "is",
+  "it",
+  "jump",
+  "little",
+  "look",
+  "make",
+  "me",
+  "my",
+  "not",
+  "one",
+  "play",
+  "red",
+  "run",
+  "said",
+];
+const WORDS = [
+  "cat",
+  "dog",
+  "bat",
+  "hat",
+  "mat",
+  "sat",
+  "pig",
+  "big",
+  "dig",
+  "sun",
+  "run",
+  "fun",
+  "hop",
+  "top",
+  "pop",
+  "bed",
+  "red",
+  "hen",
+  "pen",
+  "cup",
+  "bug",
+  "mug",
+  "log",
+  "fog",
+  "man",
+  "can",
+  "pan",
+  "fish",
+  "duck",
+  "ball",
+];
 const WHEEL_IDS = ["wheel-br", "wheel-bl", "wheel-fr", "wheel-fl"];
 const POOLS = {
   letters: LETTERS,
   lower: LOWER_LETTERS,
   digits: DIGITS,
   teens: TEENS,
+  sight: SIGHT_WORDS,
+  words: WORDS,
+};
+// Sight-word "a" can't share letter A.mp3 on case-insensitive disks.
+const AUDIO_ALIASES = {
+  a: "sight-a",
 };
 // Freeze tire damage look for layout debugging: ?debugTires=0..4
 const DEBUG_TIRES_RAW = new URLSearchParams(location.search).get("debugTires");
@@ -89,6 +159,9 @@ function shuffle(items) {
 
 function audioKey(value) {
   const text = String(value);
+  if (Object.prototype.hasOwnProperty.call(AUDIO_ALIASES, text)) {
+    return AUDIO_ALIASES[text];
+  }
   if (/^[a-z]$/.test(text)) return text.toUpperCase();
   return text;
 }
@@ -149,7 +222,7 @@ function playSfxFile(path, { volume = 1, whenMs = 0, durationMs = null } = {}) {
 }
 
 function preloadAudio() {
-  for (const value of [...DIGITS, ...TEENS, ...LETTERS]) {
+  for (const value of [...DIGITS, ...TEENS, ...LETTERS, ...SIGHT_WORDS, ...WORDS]) {
     getClip(value);
   }
   for (const path of Object.values(SFX)) getSfx(path);
@@ -330,6 +403,7 @@ function renderChoices(choices) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "choice";
+    if (String(value).length > 3) button.classList.add("wordy");
     button.textContent = value;
     button.addEventListener("click", () => onChoice(value, button));
     choicesEl.append(button);
@@ -341,9 +415,22 @@ function poolEnabled(name) {
 }
 
 function activePools() {
-  const pools = [];
+  const enabled = {};
   for (const [name, values] of Object.entries(POOLS)) {
     if (!poolEnabled(name)) continue;
+    enabled[name] = values;
+  }
+
+  const pools = [];
+  // When both number ranges are on, mix 1-digit and 2-digit answers in one round.
+  if (enabled.digits && enabled.teens) {
+    const digits = enabled.digits.includes("0") ? enabled.digits : ["0", ...enabled.digits];
+    pools.push([...digits, ...enabled.teens]);
+    delete enabled.digits;
+    delete enabled.teens;
+  }
+
+  for (const [name, values] of Object.entries(enabled)) {
     if (name === "digits") {
       pools.push(values.includes("0") ? values : ["0", ...values]);
     } else {
