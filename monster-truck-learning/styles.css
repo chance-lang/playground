@@ -378,6 +378,23 @@ button {
   background: url("img/derby-arena-loop.jpg") center / 100% 100% no-repeat;
 }
 
+.arena-dog {
+  position: absolute;
+  left: 0;
+  bottom: calc(30% + 10px);
+  height: clamp(84px, 22%, 148px);
+  width: auto;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+  filter: drop-shadow(0 2px 2px rgba(27, 40, 48, 0.28));
+}
+
+.arena-dog[hidden] {
+  display: none !important;
+}
+
 .road {
   position: relative;
   z-index: 1;
