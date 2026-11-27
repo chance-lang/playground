@@ -138,6 +138,10 @@ const dicePrompt = document.querySelector("#dicePrompt");
 const dieA = document.querySelector("#dieA");
 const dieB = document.querySelector("#dieB");
 const dieC = document.querySelector("#dieC");
+const dieNumA = document.querySelector("#dieNumA");
+const dieNumB = document.querySelector("#dieNumB");
+const dieNumC = document.querySelector("#dieNumC");
+const diceOpAB = document.querySelector("#diceOpAB");
 const diceOpC = document.querySelector("#diceOpC");
 const startOverlay = document.querySelector("#start");
 const startBtn = document.querySelector("#startBtn");
@@ -383,13 +387,26 @@ function setDiceFace(el, face) {
   el.dataset.face = String(face);
 }
 
+function setDieNum(el, face) {
+  if (!el) return;
+  el.textContent = String(face);
+}
+
 function setDiceExtraVisible(visible, op = "+") {
   if (dieC) dieC.hidden = !visible;
   if (diceOpC) {
     diceOpC.hidden = !visible;
-    diceOpC.textContent = op;
+    diceOpC.textContent = op === "-" ? "−" : "+";
     diceOpC.setAttribute("aria-hidden", visible ? "false" : "true");
   }
+  if (dieNumC) {
+    dieNumC.hidden = !visible;
+  }
+  if (diceOpAB) {
+    diceOpAB.hidden = false;
+    diceOpAB.textContent = "+";
+  }
+  if (dieNumB) dieNumB.hidden = false;
 }
 
 function showDicePrompt(faces, { op = "+", label = null } = {}) {
@@ -399,7 +416,24 @@ function showDicePrompt(faces, { op = "+", label = null } = {}) {
   const triple = faces.length >= 3;
   const subtract = op === "-";
   setDiceExtraVisible(triple, op);
-  if (triple) setDiceFace(dieC, c);
+
+  if (subtract && triple) {
+    const left = a + b;
+    setDieNum(dieNumA, left);
+    setDieNum(dieNumB, b);
+    setDiceFace(dieC, c);
+    setDieNum(dieNumC, c);
+    if (diceOpAB) diceOpAB.hidden = true;
+    if (dieNumB) dieNumB.hidden = true;
+  } else {
+    setDieNum(dieNumA, a);
+    setDieNum(dieNumB, b);
+    if (triple) {
+      setDiceFace(dieC, c);
+      setDieNum(dieNumC, c);
+    }
+  }
+
   if (dicePrompt) {
     dicePrompt.hidden = false;
     dicePrompt.classList.toggle("triple", triple);
@@ -408,7 +442,12 @@ function showDicePrompt(faces, { op = "+", label = null } = {}) {
     dicePrompt.setAttribute("aria-hidden", "false");
     dicePrompt.setAttribute(
       "aria-label",
-      label || (triple ? `${a} plus ${b} ${subtract ? "minus" : "plus"} ${c}` : `${a} plus ${b}`)
+      label ||
+        (subtract && triple
+          ? `${a + b} minus ${c}`
+          : triple
+            ? `${a} plus ${b} plus ${c}`
+            : `${a} plus ${b}`)
     );
   }
 }
@@ -592,11 +631,42 @@ function activePools() {
   return pools;
 }
 
+const POOL_SELECTION_KEY = "monsterTruckPoolSelection";
+
+function savePoolSelection() {
+  const enabled = [];
+  for (const name of Object.keys(POOLS)) {
+    if (poolEnabled(name)) enabled.push(name);
+  }
+  try {
+    localStorage.setItem(POOL_SELECTION_KEY, JSON.stringify(enabled));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function loadPoolSelection() {
+  let enabled;
+  try {
+    enabled = JSON.parse(localStorage.getItem(POOL_SELECTION_KEY) || "null");
+  } catch {
+    enabled = null;
+  }
+  if (!Array.isArray(enabled)) return;
+  const allowed = new Set(Object.keys(POOLS));
+  const selected = new Set(enabled.filter((name) => allowed.has(name)));
+  if (!selected.size) return;
+  for (const box of poolToggles) {
+    box.checked = selected.has(box.dataset.pool);
+  }
+}
+
 function syncPoolToggles(source) {
   const name = source.dataset.pool;
   for (const box of poolToggles) {
     if (box.dataset.pool === name) box.checked = source.checked;
   }
+  savePoolSelection();
   syncActionButtons();
 }
 
@@ -616,7 +686,7 @@ function nextRound() {
     const roll = parseDiceSub3(picked[0]);
     target = roll.result;
     promptValue = picked[0];
-    promptEl.textContent = `${roll.faces[0]} + ${roll.faces[1]} − ${roll.faces[2]}`;
+    promptEl.textContent = `${roll.left} − ${roll.faces[2]}`;
     showDicePrompt(roll.faces, { op: "-", label: roll.phrase });
     renderChoices(
       shuffle(diceAnswerChoices(roll.result, picked, DICE3_SUB_RESULTS, (key) => parseDiceSub3(key).result))
@@ -850,6 +920,7 @@ function resetGame() {
 for (const box of poolToggles) {
   box.addEventListener("change", () => syncPoolToggles(box));
 }
+loadPoolSelection();
 syncActionButtons();
 
 startBtn.addEventListener("click", () => {

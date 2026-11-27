@@ -27,11 +27,18 @@
           <img src="img/replay-sound.png" alt="" draggable="false">
         </button>
         <div class="dice-prompt" id="dicePrompt" hidden aria-hidden="true">
-          <div class="die" id="dieA" data-face="1"></div>
-          <span class="dice-plus" aria-hidden="true">+</span>
-          <div class="die" id="dieB" data-face="1"></div>
-          <span class="dice-plus dice-op-extra" id="diceOpC" hidden aria-hidden="true">+</span>
-          <div class="die" id="dieC" data-face="1" hidden></div>
+          <div class="dice-math" id="diceMath" aria-hidden="true">
+            <span class="die-num" id="dieNumA">1</span>
+            <span class="dice-op" id="diceOpAB">+</span>
+            <span class="die-num" id="dieNumB">1</span>
+            <span class="dice-op" id="diceOpC" hidden>+</span>
+            <span class="die-num" id="dieNumC" hidden>1</span>
+          </div>
+          <div class="dice-faces">
+            <div class="die" id="dieA" data-face="1"></div>
+            <div class="die" id="dieB" data-face="1"></div>
+            <div class="die" id="dieC" data-face="1" hidden></div>
+          </div>
         </div>
       </div>
 
