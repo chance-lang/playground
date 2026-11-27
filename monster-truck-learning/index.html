@@ -22,9 +22,25 @@
           <span class="tire-icon" title="Front left"></span>
         </div>
       </div>
-      <button type="button" id="replay" class="speaker replay-sound" aria-label="Replay the letter, number, or word" disabled>
-        <img src="img/replay-sound.png" alt="" draggable="false">
-      </button>
+      <div class="prompt-stack">
+        <button type="button" id="replay" class="speaker replay-sound" aria-label="Replay the letter, number, or word" disabled>
+          <img src="img/replay-sound.png" alt="" draggable="false">
+        </button>
+        <div class="dice-prompt" id="dicePrompt" hidden aria-hidden="true">
+          <div class="dice-math" id="diceMath" aria-hidden="true">
+            <span class="die-num" id="dieNumA">1</span>
+            <span class="dice-op" id="diceOpAB">+</span>
+            <span class="die-num" id="dieNumB">1</span>
+            <span class="dice-op" id="diceOpC" hidden>+</span>
+            <span class="die-num" id="dieNumC" hidden>1</span>
+          </div>
+          <div class="dice-faces">
+            <div class="die" id="dieA" data-face="1"></div>
+            <div class="die" id="dieB" data-face="1"></div>
+            <div class="die" id="dieC" data-face="1" hidden></div>
+          </div>
+        </div>
+      </div>
 
       <div class="arena" aria-hidden="true">
         <div class="arena-track" id="arenaTrack">
@@ -91,6 +107,21 @@
           <input type="checkbox" data-pool="words">
           <span class="switch" aria-hidden="true"></span>
         </label>
+        <label class="pool-toggle">
+          <span>2 Dice Addition</span>
+          <input type="checkbox" data-pool="dice2">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>3 Dice Addition</span>
+          <input type="checkbox" data-pool="dice3">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>3 Dice Subtraction</span>
+          <input type="checkbox" data-pool="dice3sub">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
       </div>
       <button type="button" id="startBtn" class="overlay-btn">Tap to start</button>
     </div>
@@ -121,13 +152,28 @@
           <span class="switch" aria-hidden="true"></span>
         </label>
         <label class="pool-toggle">
-          <span>Sight words</span>
+          <span>Sight Words</span>
           <input type="checkbox" data-pool="sight">
           <span class="switch" aria-hidden="true"></span>
         </label>
         <label class="pool-toggle">
-          <span>Words</span>
+          <span>Small Words</span>
           <input type="checkbox" data-pool="words">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>2 Dice Addition</span>
+          <input type="checkbox" data-pool="dice2">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>3 Dice Addition</span>
+          <input type="checkbox" data-pool="dice3">
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="pool-toggle">
+          <span>3 Dice Subtraction</span>
+          <input type="checkbox" data-pool="dice3sub">
           <span class="switch" aria-hidden="true"></span>
         </label>
       </div>

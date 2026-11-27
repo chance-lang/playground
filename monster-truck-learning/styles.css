@@ -123,12 +123,28 @@ button {
 
 .speaker:disabled { opacity: 0.45; }
 
-.replay-sound {
+.prompt-stack {
   position: absolute;
   z-index: 3;
   left: 50%;
-  top: max(calc(8px + env(safe-area-inset-top) + 52px), calc(26% - 200px));
+  top: calc(env(safe-area-inset-top) + 10px);
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.prompt-stack .speaker {
+  pointer-events: auto;
+}
+
+.replay-sound {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
 }
 
 .speaker:not(:disabled):active {
@@ -137,8 +153,198 @@ button {
 }
 
 .replay-sound:not(:disabled):active {
-  transform: translateX(-50%) translateY(3px);
+  transform: translateY(3px);
   filter: drop-shadow(0 1px 0 rgba(27, 40, 48, 0.55));
+}
+
+.dice-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.dice-prompt[hidden] {
+  display: none !important;
+}
+
+.dice-prompt.triple {
+  padding: 6px 8px 8px;
+}
+
+.dice-math {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  column-gap: 8px;
+  width: 100%;
+}
+
+.dice-faces {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  column-gap: 8px;
+  width: 100%;
+}
+
+/* 2-dice addition: num + num over die die */
+.dice-prompt.mode-add:not(.triple) .dice-math,
+.dice-prompt.mode-add:not(.triple) .dice-faces {
+  grid-template-columns: 52px 1.2em 52px;
+}
+
+.dice-prompt.mode-add:not(.triple) #dieNumA { grid-column: 1; }
+.dice-prompt.mode-add:not(.triple) #diceOpAB { grid-column: 2; }
+.dice-prompt.mode-add:not(.triple) #dieNumB { grid-column: 3; }
+.dice-prompt.mode-add:not(.triple) #dieA { grid-column: 1; }
+.dice-prompt.mode-add:not(.triple) #dieB { grid-column: 3; }
+
+/* 3-dice addition */
+.dice-prompt.mode-add.triple .dice-math,
+.dice-prompt.mode-add.triple .dice-faces {
+  grid-template-columns: 42px 1.1em 42px 1.1em 42px;
+  column-gap: 5px;
+}
+
+.dice-prompt.mode-add.triple #dieNumA { grid-column: 1; }
+.dice-prompt.mode-add.triple #diceOpAB { grid-column: 2; }
+.dice-prompt.mode-add.triple #dieNumB { grid-column: 3; }
+.dice-prompt.mode-add.triple #diceOpC { grid-column: 4; }
+.dice-prompt.mode-add.triple #dieNumC { grid-column: 5; }
+.dice-prompt.mode-add.triple #dieA { grid-column: 1; }
+.dice-prompt.mode-add.triple #dieB { grid-column: 3; }
+.dice-prompt.mode-add.triple #dieC { grid-column: 5; }
+
+/* 3-dice subtraction: summed positives over first two dice */
+.dice-prompt.mode-sub .dice-math,
+.dice-prompt.mode-sub .dice-faces {
+  grid-template-columns: 42px 42px 1.1em 42px;
+  column-gap: 5px;
+}
+
+.dice-prompt.mode-sub #dieNumA { grid-column: 1 / 3; }
+.dice-prompt.mode-sub #diceOpAB,
+.dice-prompt.mode-sub #dieNumB { display: none; }
+.dice-prompt.mode-sub #diceOpC { grid-column: 3; }
+.dice-prompt.mode-sub #dieNumC { grid-column: 4; }
+.dice-prompt.mode-sub #dieA { grid-column: 1; }
+.dice-prompt.mode-sub #dieB { grid-column: 2; }
+.dice-prompt.mode-sub #dieC { grid-column: 4; }
+
+.die-num {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+  min-height: 1.2em;
+  color: var(--ink);
+}
+
+.dice-op {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+  min-height: 1.2em;
+  color: var(--ink);
+}
+
+.dice-prompt.triple .die-num,
+.dice-prompt.triple .dice-op {
+  font-size: 1.15rem;
+}
+
+.die {
+  --pip: #1b2830;
+  --die-face: #fff;
+  width: 52px;
+  height: 52px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background-color: var(--die-face);
+  box-shadow: inset 0 0 0 1px rgba(27, 40, 48, 0.12);
+}
+
+.dice-prompt.mode-add,
+.dice-prompt.mode-sub {
+  background: rgba(210, 230, 255, 0.95);
+}
+
+.dice-prompt.mode-add .die,
+.dice-prompt.mode-sub .die {
+  --die-face: #2f6fd6;
+  --pip: #fff;
+  border-color: #1b3f7a;
+}
+
+.dice-prompt.mode-add .die-num,
+.dice-prompt.mode-add .dice-op,
+.dice-prompt.mode-sub #dieNumA {
+  color: #1b3f7a;
+}
+
+.dice-prompt.mode-sub #dieC {
+  --die-face: #8b1e1e;
+  --pip: #fff;
+  border-color: #4a0f0f;
+}
+
+.dice-prompt.mode-sub #dieNumC,
+.dice-prompt.mode-sub #diceOpC {
+  color: #4a0f0f;
+}
+
+.dice-prompt.triple .die {
+  width: 42px;
+  height: 42px;
+}
+
+.die[data-face="1"] {
+  background-image: radial-gradient(circle at 50% 50%, var(--pip) 0 4.2px, transparent 4.6px);
+}
+
+.die[data-face="2"] {
+  background-image:
+    radial-gradient(circle at 24% 24%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 76%, var(--pip) 0 4.2px, transparent 4.6px);
+}
+
+.die[data-face="3"] {
+  background-image:
+    radial-gradient(circle at 24% 24%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 50% 50%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 76%, var(--pip) 0 4.2px, transparent 4.6px);
+}
+
+.die[data-face="4"] {
+  background-image:
+    radial-gradient(circle at 24% 24%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 24%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 24% 76%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 76%, var(--pip) 0 4.2px, transparent 4.6px);
+}
+
+.die[data-face="5"] {
+  background-image:
+    radial-gradient(circle at 24% 24%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 24%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 50% 50%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 24% 76%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 76%, var(--pip) 0 4.2px, transparent 4.6px);
+}
+
+.die[data-face="6"] {
+  background-image:
+    radial-gradient(circle at 24% 20%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 20%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 24% 50%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 50%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 24% 80%, var(--pip) 0 4.2px, transparent 4.6px),
+    radial-gradient(circle at 76% 80%, var(--pip) 0 4.2px, transparent 4.6px);
 }
 
 .arena {
