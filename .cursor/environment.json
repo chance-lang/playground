@@ -1,0 +1,11 @@
+{
+  "name": "playground",
+  "install": "[ ! -d '/agent/repos/playground' ] || cd '/agent/repos/playground' || exit $?\ntest -f monster-truck-learning/index.html\ntest -f monster-truck-learning/game.js\ntest -f monster-truck-learning/styles.css\ntest -d monster-truck-learning/audio/default\ntest -d monster-truck-learning/img\ncommand -v python3 >/dev/null\necho \"monster-truck-learning static game is present\"\n",
+  "start": "[ ! -d '/agent/repos/playground' ] || cd '/agent/repos/playground' || exit $?\nset -euo pipefail\nport_open() {\n  python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(0.4); sys.exit(0 if s.connect_ex((\"127.0.0.1\", 8080))==0 else 1)'\n}\nif port_open; then\n  echo \"monster-truck server already listening on 8080\"\n  exit 0\nfi\nexec python3 -m http.server 8080 --bind 0.0.0.0 --directory monster-truck-learning\n",
+  "ports": [
+    {
+      "name": "monster-truck",
+      "port": 8080
+    }
+  ]
+}
