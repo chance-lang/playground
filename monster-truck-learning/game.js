@@ -154,6 +154,15 @@ const finalScore = document.querySelector("#finalScore");
 const tireIcons = [...tiresEl.children];
 const ARENA_SCROLL_MS = 12000;
 const ARENA_DOG_EVERY_MS = 30000;
+const ARENA_DOG_SOURCES = [
+  "img/arena-dog.png",
+  "img/arena-dog-hardhat.png",
+  "img/arena-dog-mechanic.png",
+  "img/arena-dog-biker.png",
+  "img/arena-dog-plaid.png",
+  "img/arena-dog-racer.png",
+  "img/arena-dog-fan.png",
+];
 const WRECK_HOLD_MS = 3000;
 const DICE2_SUMS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 const DICE3_SUMS = ["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"];
@@ -829,12 +838,17 @@ function syncArenaDogFrame() {
   arenaDogWatch = window.requestAnimationFrame(syncArenaDogFrame);
 }
 
+function pickArenaDogSource() {
+  return ARENA_DOG_SOURCES[Math.floor(Math.random() * ARENA_DOG_SOURCES.length)];
+}
+
 function spawnArenaDog() {
   if (!arenaDog || !arenaTrack || !arenaEl) return;
   const loopWidth = arenaTrack.scrollWidth / 2;
   if (loopWidth <= 0) return;
 
   hideArenaDog();
+  arenaDog.src = pickArenaDogSource();
   arenaDog.hidden = false;
 
   const scrollX = arenaScrollX();
@@ -844,6 +858,13 @@ function spawnArenaDog() {
   arenaDogLastScrollX = scrollX;
   arenaDog.style.transform = `translateX(${viewW + 40}px)`;
   arenaDogWatch = window.requestAnimationFrame(syncArenaDogFrame);
+}
+
+function preloadArenaDogs() {
+  for (const src of ARENA_DOG_SOURCES) {
+    const img = new Image();
+    img.src = src;
+  }
 }
 
 function scheduleArenaDog(delayMs = ARENA_DOG_EVERY_MS) {
@@ -1007,6 +1028,7 @@ startBtn.addEventListener("click", () => {
   startOverlay.hidden = true;
   replayBtn.disabled = false;
   preloadAudio();
+  preloadArenaDogs();
   unlockAudio();
   scheduleArenaDog(ARENA_DOG_EVERY_MS);
   nextRound();
